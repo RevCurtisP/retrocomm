@@ -53,6 +53,8 @@ Numeric Keypad:
  
  The keys M, J, K L, U, I, O are interpeted as the digits 0 through 6
  allowing keypad type entry on notebook computers without using Num-Lock.
+ 
+ In addition, the Spacebar acts the same as the Escape key.
 
 """
 
@@ -159,8 +161,9 @@ class DateTimeEntry(Entry):
     if len(c) == 0: return
     if c in ['+', '=']: return self.__backspace()
     if c in ['-', '_']: return self.clear()
-    if c in '*': return self.__escape()
-    if c in '/': return self.__help()
+    if c in ['*', ' ']: return self.__escape()
+    if c in '/': 
+      return self.__help()
     s = self.get()
     i = "MJKLUIO".find(c.upper()) if c else -1
     if i > -1 :
@@ -349,7 +352,7 @@ class TicketWindow(Tk):
     pdt = self.printed.datetime
     if vdt and pdt:
       delta = vdt - pdt if vdt > pdt else pdt - vdt
-      seconds = delta.days * 864E2 + delta.seconds
+      seconds = delta.days * 24.0 * 3600 + delta.seconds
       hours = math.ceil(seconds/3600)
       text = str(int(hours)) if hours > 1 else "GP"
       if self.debug:
@@ -402,6 +405,7 @@ class TicketWindow(Tk):
     self.total = self.__display(row=3, column=1)
     self.total.bind_all('<KeyPress-Escape>', self.__clear)
     self.total.bind_all('<KeyPress-KP_Multiply>', self.__clear)
+    self.total.bind_all('<space>', self.__clear)
     self.total.bind_all('<KeyPress-F1>', self.__help)
     self.total.bind_all('<KeyPress-KP_Divide>', self.__help)
     self.__clear()
