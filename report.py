@@ -83,12 +83,12 @@ class FloatEntry(Entry):
     self.config(state=self.__state)
     return
 
-  def setfloat(self, f):
-    s = "" if f == None else "{:0.2f}".format(f)
+  def setfloat(self, f, fmt="{:0.2f}"):
+    s = "" if f == None else fmt.format(f)
     self.set(s)
  
-  def setint(self, i):
-    s = "" if i == None else str(i)
+  def setint(self, i, fmt="{:0d}"):
+    s = "" if i == None else fmt.format(i)
     self.set(s)
     return
 
@@ -112,13 +112,16 @@ class FloatEntry(Entry):
   def __filterKeys(self, event):
     c = event.char
     if c in [' ', '*']: return self.clear()
-    if c in ['-', '_']: return self.decrement()
+    #if c in ['-', '_']: return self.decrement()
     if c in ['+', '=']: return self.increment()
     s = self.get()
     l = self.cget("width")
     if c >= " " and c <> chr(127):
-      if len(s)>l-1: c = None
-      if c == ".":
+      if len(s)>l-1: 
+        c = None
+      elif c in ['-', '_']:
+        if len(s): c = None;
+      elif c == ".":
         if c in s: c = None
       elif not c.isdigit(): 
         c = None
@@ -190,8 +193,8 @@ class IntegerEntry(Entry):
     self.config(state=self.__state)
     return
  
-  def setint(self, i):
-    s = "" if i == None else str(i)
+  def setint(self, i, fmt="{:0d}"):
+    s = "" if i == None else fmt.format(i)
     self.set(s)
     return
 
@@ -436,7 +439,8 @@ class TicketDetail(Frame):
       count = line["collected"].getint()
       if count: tickets += count
     self.totalDollars["total"].setfloat(dollars)
-    self.totalTickets["total"].setint(tickets)
+    #self.totalTickets["total"].setint(tickets)
+    self.totalDollars["collected"].setint(tickets)
     if self.totfn: self.totfn()
     
   def __ticketCalc(self, event):
@@ -467,23 +471,24 @@ class TicketDetail(Frame):
 
   def __ticketLineDict(self):
     lines = dict()
-    lines['1:00'] = self.__ticketLine("Daily 01:00", 0.00)
-    lines['1:30'] = self.__ticketLine("Daily 01:30", 1.00)
-    lines['2:00'] = self.__ticketLine("Daily 02:00", 2.00)
-    lines['2:30'] = self.__ticketLine("Daily 02:30", 3.00)
-    lines['3:00'] = self.__ticketLine("Daily 03:00", 4.25)
+    lines['0:30'] = self.__ticketLine("Daily 00:30", 1.00)
+    lines['1:00'] = self.__ticketLine("Daily 01:00", 2.00)
+    lines['1:30'] = self.__ticketLine("Daily 01:30", 3.00)
+    lines['2:00'] = self.__ticketLine("Daily 02:00", 4.00)
+    lines['2:30'] = self.__ticketLine("Daily 02:30", 5.00)
     lines['Spec'] = self.__ticketLine("Special Event", 2.00)
     lines['OTIM'] = self.__ticketLine("Val Overtime")
     lines['PDAY'] = self.__ticketLine("Prior Day", editExt=True )
-    lines['LOST'] = self.__ticketLine("Lost Ticket", 5.25)
+    lines['LOST'] = self.__ticketLine("Lost Ticket", 6.00)
     lines['VOID'] = self.__ticketLine("Voids")
-    lines['DMAX'] = self.__ticketLine("Daily Max", 5.25)
+    lines['DMAX'] = self.__ticketLine("Daily Max", 6.00)
+    lines['FLAT'] = self.__ticketLine("Flat Rate", 2.00)
     lines['PPAY'] = self.__ticketLine("Promise to Pay", editExt=True)
-    lines['NTWE'] = self.__ticketLine("Night/Weekend", 1.50)
+    #lines['NTWE'] = self.__ticketLine("Night/Weekend", 1.50)
     lines['FVAL'] = self.__ticketLine("Fully Validated Tixs", editExt=True)
-    lines['OVSH'] = self.__ticketLine("OverShort", editCol=False, editExt=True)
+    lines['OVSH'] = self.__ticketLine("Over/Short", editCol=False, editExt=True)
     lines['MBIL'] = self.__ticketLine("Monthly Billing")
-    lines['NBIL'] = self.__ticketLine("Nightly Billing")
+    #lines['NBIL'] = self.__ticketLine("Nightly Billing")
     return lines
 
   def __endingTickets(self, include=True):
@@ -497,12 +502,12 @@ class TicketDetail(Frame):
   def __checkLine(self):
     self.endingTickets = IntVar()
     line = dict()
+    line['tickets'] = IntegerEntry(self, readonly=True)
     line['check'] = Checkbox(self)
     line['check'].grid(row=self.currentRow, column=nextColumn(self), sticky=E)
     line['check'].config(command=self.__endingTickets)
     line['desc'] = Label(self, text="Include Ending Tickets")
-    line['desc'].grid(row=self.currentRow, column=nextColumn(self), sticky=W)
-    line['tickets'] = FloatEntry(self, readonly=True)
+    line['desc'].grid(row=self.currentRow, column=nextColumn(self), sticky=E+W)
     line['dollars'] = FloatEntry(self, readonly=True)
     nextRow(self)
     return line
@@ -522,7 +527,7 @@ class TicketDetail(Frame):
     self.labelLine = self.__labelLine()
     self.ticketLines = self.__ticketLineDict()
     self.totalDollars = self.__totalLine("Total Dollars Collected")
-    self.totalTickets = self.__totalLine("Total Tickets Collected")
+    #self.totalTickets = self.__totalLine("Total Tickets Collected")
     self.checkLine = self.__checkLine()
     self.plusMinus = 0
     self.totfn = totfn
@@ -532,15 +537,16 @@ class TicketDetail(Frame):
     return total
 
   def getTotalTickets(self):
-    total = self.totalTickets["total"].getint()
+    #total = self.totalTickets["total"].getint()
+    total = self.totalDollars["collected"].getint()
     return None if total==None else total - self.plusMinus
 
   def setCheckDollars(self, f):
-    self.checkLine['dollars'].setfloat(f)
+    self.checkLine['dollars'].setfloat(f, fmt="{:+0.2f}")
     return
 
   def setCheckTickets(self, i):
-    self.checkLine['tickets'].setint(i)
+    self.checkLine['tickets'].setint(i, fmt="{:+0d}")
     return
 
 class ShiftReport(Tk):
@@ -552,7 +558,7 @@ class ShiftReport(Tk):
     trzTickets = self.ticketCount.getTotalTickets()
     totNoRings = self.noRings.getTotalNoRings()
     if totDollars and drpDollars:
-      varDollars = totDollars - drpDollars
+      varDollars = drpDollars - totDollars
     else:
       varDollars = None
     if totTickets and trzTickets:
