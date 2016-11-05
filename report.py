@@ -439,8 +439,8 @@ class TicketDetail(Frame):
       count = line["collected"].getint()
       if count: tickets += count
     self.totalDollars["total"].setfloat(dollars)
-    #self.totalTickets["total"].setint(tickets)
-    self.totalDollars["collected"].setint(tickets)
+    self.totalTickets["total"].setint(tickets)
+    #self.totalDollars["collected"].setint(tickets)
     if self.totfn: self.totfn()
     
   def __ticketCalc(self, event):
@@ -527,7 +527,7 @@ class TicketDetail(Frame):
     self.labelLine = self.__labelLine()
     self.ticketLines = self.__ticketLineDict()
     self.totalDollars = self.__totalLine("Total Dollars Collected")
-    #self.totalTickets = self.__totalLine("Total Tickets Collected")
+    self.totalTickets = self.__totalLine("Total Tickets Collected")
     self.checkLine = self.__checkLine()
     self.plusMinus = 0
     self.totfn = totfn
@@ -537,8 +537,8 @@ class TicketDetail(Frame):
     return total
 
   def getTotalTickets(self):
-    #total = self.totalTickets["total"].getint()
-    total = self.totalDollars["collected"].getint()
+    total = self.totalTickets["total"].getint()
+    #total = self.totalDollars["collected"].getint()
     return None if total==None else total - self.plusMinus
 
   def setCheckDollars(self, f):
