@@ -54,7 +54,7 @@ Numeric Keypad:
  The keys M, J, K L, U, I, O are interpeted as the digits 0 through 6
  allowing keypad type entry on notebook computers without using Num-Lock.
  
- In addition, the Spacebar acts the same as the Escape key.
+ In addition, the Spacebar acts the same as the Escape key.a
 
 """
 
@@ -354,7 +354,7 @@ class TicketWindow(Tk):
       delta = vdt - pdt if vdt > pdt else pdt - vdt
       seconds = delta.days * 24.0 * 3600 + delta.seconds
       hours = math.ceil(seconds/3600)
-      text = str(int(hours)) if hours > 1 else "GP"
+      text = str(int(hours)) if seconds > 300 else "NP"
       if self.debug:
         print "start", pdt
         print "end  ", vdt
