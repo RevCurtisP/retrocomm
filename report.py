@@ -334,21 +334,28 @@ class CashDrop(Frame):
     self.otherAmount.bind("<FocusOut>", self.__calc, add='+')
     self.cashAmount = FloatEntry(self, label="Cash", readonly=True)
     self.cashAmount.bind("<FocusOut>", self.__calc, add='+')
-    self.checkAmount = FloatEntry(self, label="Checks", autodecimal=True)
+    self.checkAmount = FloatEntry(self, label="Checks", autodecimal=False)
     self.checkAmount.bind("<FocusOut>", self.__calc, add='+')
     self.totalAmount = FloatEntry(self, label="Total", readonly=True)
     self.totalAmount.bind("<FocusOut>", self.__calc, add='+')
+    self.creditAmount = FloatEntry(self, label="Credit", autodecimal=False)
+    self.creditAmount.bind("<FocusOut>", self.__calc, add='+')
     self.totfn = totfn
     return
 
   def getTotalDollars(self):
-    return self.totalAmount.getfloat()
+    cash = self.totalAmount.getfloat()
+    credit = self.creditAmount.getfloat()
+    if cash == None and credit == None: return None
+    if cash == None: cash = 0
+    if credit == None: credit = 0
+    return cash + credit
 
 class DisplayDate(Frame):
 
   def __init__(self, totfn=None):
     Frame.__init__(self)
-    self.config(borderwidth=2, relief=RIDGE)
+    self.config(borderwidth=2, relief=RIDGE )
     text = time.strftime('%m-%d-%y')
     self.dateDisplay = TextDisplay(self, text, width=9, label="Date")
     return
