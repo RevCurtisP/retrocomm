@@ -2,6 +2,7 @@
 #uses Poshmark order notification email as input
 #Requires Python 3.7 and FPDF library
 
+import argparse
 import email
 import quopri
 import urllib.request
@@ -57,7 +58,7 @@ class PackSlip():
   def __init__(self, order):
     self.order = order
   
-  def generate(self):
+  def generate(self, pdf_name):
     self.left_margin = .75
     self.top_margin = 1
     self.pdf = FPDF("P", "in", "Letter")
@@ -66,7 +67,7 @@ class PackSlip():
     self.header()
     self.y = 3
     self.items()
-    self.pdf.output("poshmark.pdf")
+    self.pdf.output(pdf_name)
     
   def header(self):
     self.pdf.set_font("Arial", "B", 24)
@@ -185,11 +186,24 @@ def email_html(file):
     body = message.get_payload(decode=True)
   return quopri.decodestring(body).decode()
 
-shipfrom = ["Curtis F Kaylor", "159 Hunter Ave", "Munroe Falls OH 44262"]
-seller = "@revcurtisp"
-order = Order(shipfrom, seller)
-parser = Parser(order)
-html = email_html("poshmark.eml")
-parser.feed(html)
-packslip = PackSlip(order)
-packslip.generate()
+def packslip_from_email(email, pdf):
+  shipfrom = ["Curtis F Kaylor", "159 Hunter Ave", "Munroe Falls OH 44262"]
+  seller = "@revcurtisp"
+  order = Order(shipfrom, seller)
+  parser = Parser(order)
+  html = email_html(email)
+  parser.feed(html)
+  packslip = PackSlip(order)
+  packslip.generate(pdf)
+
+
+def main():
+  parser = argparse.ArgumentParser()
+  parser.add_argument("emlfile", help="Input File Name (with .eml extension)")
+  parser.add_argument("pdffile", help="Output File Name (with .pdf extension)")
+  args = parser.parse_args()
+
+  packslip_from_email(args.emlfile, args.pdffile)
+
+if __name__ == "__main__":
+    main()
