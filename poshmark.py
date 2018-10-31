@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 #Poshmark Packing Slip Generator
 #uses Poshmark order notification email as input
 #Requires Python 3.7 and FPDF library
