@@ -1,0 +1,14 @@
+LOGIN
+  There are no passwords. You can use
+  any username you want, meaning anyone
+  can login as anyone.
+  This will change in the future.
+FILE
+  There are no upload/download options
+  yet. This may be added later.
+MAIL
+  Read shows each email sequentially
+  There is no mechanism for marking
+  mail as read at this point.
+MESSAGE BOARDS
+  None Yet. This may be next.

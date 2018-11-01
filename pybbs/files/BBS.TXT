@@ -1,0 +1,10 @@
+A bulletin board system or BBS is a computer server running software 
+that allows users to connect to the system using a terminal program. 
+
+Once logged in, the user can perform functions such as uploading and 
+downloading software and data, reading news and bulletins, and exchanging 
+messages with other users through public message boards and sometimes 
+via direct chatting. 
+
+In the early days, message aggregators and bulk store-and-forward'ers 
+provided services such as FidoNet, which is similar to email.

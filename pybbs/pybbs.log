@@ -1,0 +1,168 @@
+2018-10-31 20:24:33 - 11948: Connection from 127.0.0.1 on Port 51266
+2018-10-31 20:26:08 - 12580: Connection from 127.0.0.1 on Port 51279
+2018-10-31 20:44:07 - <bound method Log.__getthreadid of <__main__.Log object at 0x033329F0>>: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 20:46:05 12608: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 20:46:17 12608: Connection from 127.0.0.1 on Port 51350
+2018-10-31 20:47:04 12608: Connection from 127.0.0.1 on Port 51352
+2018-10-31 20:56:44 2484: Server Opened on 127.0.0.1 Port 2323
+
+2018-10-31 20:57:07 2484: Connection from 127.0.0.1 on Port 51375
+
+2018-10-31 20:59:46 7292: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 20:59:50 7292: Connection from 127.0.0.1 on Port 51381
+2018-10-31 20:59:53 7292: User curtislogged in
+2018-10-31 21:03:37 13384: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 21:03:43 13384: Connection from 127.0.0.1 on Port 51394
+2018-10-31 21:03:46 13384: User curtis logged in
+2018-10-31 21:03:48 13384: User curtislogged out
+2018-10-31 21:03:53 13384: Server terminated by keyboard interrupt
+2018-10-31 21:21:22 11304: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 21:21:26 11304: Connection from 127.0.0.1 on Port 51435
+2018-10-31 21:22:55 11304: Server terminated by keyboard interrupt
+2018-10-31 21:23:01 15108: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 21:23:05 15108: Connection from 127.0.0.1 on Port 51441
+2018-10-31 21:23:12 15108: User curtis logged in
+2018-10-31 21:31:09 15108: User curtis logged out
+2018-10-31 21:31:16 15108: Server terminated by keyboard interrupt
+2018-10-31 21:31:19 4456: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 21:32:20 4456: Connection from 127.0.0.1 on Port 51462
+2018-10-31 21:32:25 4456: User curtis logged in
+2018-10-31 21:33:13 4456: Server terminated by keyboard interrupt
+2018-10-31 21:33:14 13352: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 21:33:18 13352: Connection from 127.0.0.1 on Port 51469
+2018-10-31 21:33:22 13352: User curtis logged in
+2018-10-31 21:47:28 13352: User curtis logged out
+2018-10-31 21:47:34 13352: Server terminated by keyboard interrupt
+2018-10-31 21:47:36 14948: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 21:47:39 14948: Connection from 127.0.0.1 on Port 51489
+2018-10-31 21:47:43 14948: User curtis logged in
+2018-10-31 21:48:48 14948: Server terminated by keyboard interrupt
+2018-10-31 21:48:49 14436: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 21:48:53 14436: Connection from 127.0.0.1 on Port 51494
+2018-10-31 21:48:59 14436: User curtis logged in
+2018-10-31 21:49:50 14436: Server terminated by keyboard interrupt
+2018-10-31 21:49:53 14704: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 21:49:57 14704: Connection from 127.0.0.1 on Port 51499
+2018-10-31 21:50:01 14704: User curtis logged in
+2018-10-31 21:50:55 14704: User curtis logged out
+2018-10-31 22:01:17 14704: Server terminated by keyboard interrupt
+2018-10-31 22:02:23 5960: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 22:02:27 5960: Connection from 127.0.0.1 on Port 51557
+2018-10-31 22:02:31 5960: User curtis logged in
+2018-10-31 22:03:36 5960: User curtis logged out
+2018-10-31 22:05:29 5960: Server terminated by keyboard interrupt
+2018-10-31 22:05:30 6940: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 22:05:33 6940: Connection from 127.0.0.1 on Port 51566
+2018-10-31 22:05:36 6940: User curt logged in
+2018-10-31 22:06:57 6940: Server terminated by keyboard interrupt
+2018-10-31 22:06:58 14364: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 22:07:01 14364: Connection from 127.0.0.1 on Port 51571
+2018-10-31 22:07:05 14364: User curt logged in
+2018-10-31 22:07:33 14364: User curt logged out
+2018-10-31 22:09:12 14364: Server terminated by keyboard interrupt
+2018-10-31 22:09:33 5808: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 22:09:38 5808: Connection from 127.0.0.1 on Port 51581
+2018-10-31 22:09:42 5808: User curtis logged in
+2018-10-31 22:09:44 5808: User curtis logged out
+2018-10-31 22:09:49 5808: Server terminated by keyboard interrupt
+2018-10-31 22:18:14 5052: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 22:18:18 5052: Connection from 127.0.0.1 on Port 51609
+2018-10-31 22:19:28 5052: Server terminated by keyboard interrupt
+2018-10-31 22:19:30 8804: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 22:19:34 8804: Connection from 127.0.0.1 on Port 51612
+2018-10-31 22:19:40 8804: User curtis logged in
+2018-10-31 22:20:31 8804: Connection from 127.0.0.1 on Port 51616
+2018-10-31 22:20:42 8804: User curtis logged in
+2018-10-31 22:21:16 8804: Server terminated by keyboard interrupt
+2018-10-31 22:21:29 4104: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 22:21:31 4104: Connection from 127.0.0.1 on Port 51622
+2018-10-31 22:21:35 4104: User curtis logged in
+2018-10-31 22:24:29 4104: Server terminated by keyboard interrupt
+2018-10-31 22:24:31 7328: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 22:24:34 7328: Connection from 127.0.0.1 on Port 51628
+2018-10-31 22:24:38 7328: User curtis logged in
+2018-10-31 22:25:12 7328: Server terminated by keyboard interrupt
+2018-10-31 22:25:13 14688: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 22:25:15 14688: Connection from 127.0.0.1 on Port 51630
+2018-10-31 22:25:17 14688: User c logged in
+2018-10-31 22:27:38 14688: Server terminated by keyboard interrupt
+2018-10-31 22:27:39 15036: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 22:27:42 15036: Connection from 127.0.0.1 on Port 51638
+2018-10-31 22:27:45 15036: User curtis logged in
+2018-10-31 22:28:39 15036: Server terminated by keyboard interrupt
+2018-10-31 22:28:40 6336: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 22:28:44 6336: Connection from 127.0.0.1 on Port 51641
+2018-10-31 22:28:48 6336: User curtis logged in
+2018-10-31 22:32:29 6336: Server terminated by keyboard interrupt
+2018-10-31 22:32:53 10888: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 22:32:55 10888: Connection from 127.0.0.1 on Port 51647
+2018-10-31 22:32:59 10888: User curtis logged in
+2018-10-31 22:33:31 10888: User curtis logged out
+2018-10-31 22:33:37 10888: Server terminated by keyboard interrupt
+2018-10-31 22:46:28 8752: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 22:46:31 8752: Connection from 127.0.0.1 on Port 51954
+2018-10-31 22:46:35 8752: User jaidex logged in
+2018-10-31 22:51:21 8752: Server terminated by keyboard interrupt
+2018-10-31 22:51:22 14172: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 22:51:25 14172: Connection from 127.0.0.1 on Port 51966
+2018-10-31 22:51:30 14172: User jaidex logged in
+2018-10-31 22:53:21 14172: Server terminated by keyboard interrupt
+2018-10-31 22:53:24 7240: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 22:53:27 7240: Connection from 127.0.0.1 on Port 51977
+2018-10-31 22:53:30 7240: User jaidex logged in
+2018-10-31 22:54:43 7240: Server terminated by keyboard interrupt
+2018-10-31 22:54:44 14536: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 22:54:47 14536: Connection from 127.0.0.1 on Port 51982
+2018-10-31 22:54:51 14536: User jaidex logged in
+2018-10-31 22:55:28 14536: Server terminated by keyboard interrupt
+2018-10-31 22:59:39 4264: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 22:59:42 4264: Connection from 127.0.0.1 on Port 51995
+2018-10-31 22:59:46 4264: User jaidex logged in
+2018-10-31 23:00:17 4264: User jaidex logged out
+2018-10-31 23:05:56 4264: Server terminated by keyboard interrupt
+2018-10-31 23:05:57 9308: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 23:06:02 9308: Connection from 127.0.0.1 on Port 52004
+2018-10-31 23:06:05 9308: User jaidex logged in
+2018-10-31 23:07:53 9308: Server terminated by keyboard interrupt
+2018-10-31 23:07:54 14588: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 23:07:57 14588: Connection from 127.0.0.1 on Port 52012
+2018-10-31 23:08:00 14588: User jaidex logged in
+2018-10-31 23:08:34 14588: Server terminated by keyboard interrupt
+2018-10-31 23:08:35 9612: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 23:08:37 9612: Connection from 127.0.0.1 on Port 52014
+2018-10-31 23:08:41 9612: User jaidex logged in
+2018-10-31 23:09:20 9612: User jaidex logged out
+2018-10-31 23:09:34 9612: Server terminated by keyboard interrupt
+2018-10-31 23:09:35 4088: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 23:09:38 4088: Connection from 127.0.0.1 on Port 52017
+2018-10-31 23:09:42 4088: User jaidex logged in
+2018-10-31 23:15:23 4088: Connection from 127.0.0.1 on Port 52119
+2018-10-31 23:15:38 4088: Server terminated by keyboard interrupt
+2018-10-31 23:15:39 14724: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 23:15:43 14724: Connection from 127.0.0.1 on Port 52121
+2018-10-31 23:15:47 14724: User jaidex logged in
+2018-10-31 23:16:20 14724: User jaidex logged out
+2018-10-31 23:16:22 14724: Server terminated by keyboard interrupt
+2018-10-31 23:16:25 6196: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 23:16:28 6196: Connection from 127.0.0.1 on Port 52123
+2018-10-31 23:16:32 6196: User jaidex logged in
+2018-10-31 23:17:27 6196: User jaidex logged out
+2018-10-31 23:17:32 6196: Connection from 127.0.0.1 on Port 52126
+2018-10-31 23:17:36 6196: User curtis logged in
+2018-10-31 23:18:39 6196: User curtis logged out
+2018-10-31 23:18:41 6196: Server terminated by keyboard interrupt
+2018-10-31 23:18:42 14636: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 23:18:45 14636: Connection from 127.0.0.1 on Port 52134
+2018-10-31 23:18:48 14636: User curtis logged in
+2018-10-31 23:19:06 14636: Server terminated by keyboard interrupt
+2018-10-31 23:19:07 6772: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 23:19:09 6772: Connection from 127.0.0.1 on Port 52136
+2018-10-31 23:19:14 6772: User curtis logged in
+2018-10-31 23:20:34 6772: User curtis logged out
+2018-10-31 23:20:41 6772: Server terminated by keyboard interrupt
+2018-10-31 23:20:45 12580: Server Opened on 127.0.0.1 Port 2323
+2018-10-31 23:20:48 12580: Connection from 127.0.0.1 on Port 52146
+2018-10-31 23:20:52 12580: User curtis logged in
+2018-10-31 23:28:22 12580: User curtis logged out
+2018-10-31 23:28:28 12580: Connection from 127.0.0.1 on Port 52161
+2018-10-31 23:28:54 12580: Server terminated by keyboard interrupt
