@@ -1,12 +1,13 @@
 #!/usr/bin/python
+#for Python 2.7
 '''Retro Terminal Program '''
 
-import queue
+import Queue
 import socket
 import string
-import sys
 import telnetlib as tl
-from tkinter import *
+from Tkinter import *
+import sys
 
 DEBUG = 0
 
@@ -337,8 +338,8 @@ class Modem(object):
     self.inchar_callback = incharfn
     self.after_callback = afterfn
     self.disconnect_callback = disconnectfn
-    self.outbuffer = queue.Queue()
-    self.inbuffer = queue.Queue()
+    self.outbuffer = Queue.Queue()
+    self.inbuffer = Queue.Queue()
     self.__telnet = tl.Telnet()
     self.__telnet.set_option_negotiation_callback(self.__negotiate_option)
     self.__telnet.set_debuglevel(DEBUG)
@@ -389,12 +390,15 @@ class Modem(object):
       self.__telnet.open(host, portno, 1)
       self.connected = True
       result = "Connected"
-    except socket.gaierror as x:
-      result = "Invalid Host"
+    except socket.timeout as e:      
+      result = e[0]
+    except socket.error as e:
+      errno, errmsg = e
+      result = errmsg
     except ValueError as x:
       result = "Invalid Port"
     except Exception as x:
-      result = str(x)
+      result = x.message
     self.__echo(result)
     self.__timer()
   def disconnect(self):
