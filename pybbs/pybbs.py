@@ -1,5 +1,5 @@
-#!/usr/bin/python
-'''Plain Text BBS'''
+#!/usr/bin/python2
+'''Early 1980's Style Plain Text BBS'''
 
 import ConfigParser
 from datetime import datetime
@@ -60,32 +60,47 @@ NEWLINE = CR + LF
 ECHOOFF = IAC + DONT + ECHO
 
 class Config(object):
-  def __init__(self):
-    object.__init__(self)
+  def __debug(self, message):
+    if self.verbose:
+      print message
+  def __init__(self, verbose=False):
+    self.verbose = verbose
     self.config = ConfigParser.ConfigParser(DEFAULT_CONFIG)
     result = self.config.read(CONFIG_FILE)
     if result:
-      print "Using config file", result
+      self.__debug("Using config file " + str(result))
     else:
-      print "Unable to read file", CONFIG_FILE
+      self.__debug("Unable to read file " + CONFIG_FILE)
   def getstr(self, section, option):
     try: 
       result = self.config.get(section, option)
-      print "Using config file section", section, "option", option
+      self.__debug("Using config file section " + section + " option " + option)
     except: 
       result = DEFAULT_CONFIG[option]
-      print "Using default option", option
+      self.__debug("Using default option " + option)
     return result
   def getint(self, section, option):
     try: 
       return int(self.getstr(section, option))
     except ValueError as err:
-      print ValueError, "in section", section, "option", option
+      self.__debug(str(ValueError) + " in section " + section + " option ", option)
       quit()
 
+class Debug(object):
+  def __init__(self, level=0, threadid=None):
+    self.level = level
+    if not threadid:
+      thread = threading.current_thread()
+      threadid = thread.ident
+    self.threadid = threadid
+  def write(self, message, level=1):
+    if level <= self.level:
+      decoded = message.encode('unicode_escape')
+      print self.threadid, decoded
+
 class Database(object):
-  def __debug(self, message, level=0):
-    if self.debug: self.debug(message, level)
+  def __debug(self, message, level=1):
+    if self.debug: self.debug.write(message, level)
   def __init__(self, dbname, debug=None):
     self.debug = debug
     self.__debug('Opening Database ' + dbname)
@@ -99,7 +114,10 @@ class Database(object):
     self.__debug('Creating Database Table ' + table, 4)
     query = 'CREATE TABLE IF NOT EXISTS ' + table + ' ( ' + columns +' )'
     self.execute(query)
-  def read_rows(self, table, criteria):
+  def read_row(self, table, criteria):
+    rows = self.read_rows(table, criteria, 1)
+    return rows[0] if len(rows) else None
+  def read_rows(self, table, criteria, limit=None):
     self.__debug('Reading Rows from Table ' + table, 4)
     self.__debug('With Criteria ' + str(criteria), 4)
     where = []
@@ -107,12 +125,15 @@ class Database(object):
     for column, value in criteria.items():
       where.append(column + '=?')
       what.append(value)
-    query = 'SELECT * FROM ' + table + ' WHERE ' + ', '.join(where)
+    query = 'SELECT rowid,* FROM ' + table + ' WHERE ' + ' AND '.join(where)
+    if limit: query += ' LIMIT ' + str(limit)
     columns = tuple(what)
     self.__debug('Query: ' + query, 4)
     self.__debug('Columns: ' + str(columns), 4)
     self.crsr.execute(query, columns)
-    return self.crsr.fetchall()
+    rows = self.crsr.fetchall()
+    self.__debug('Read Rows ' + str(rows), 4)
+    return rows
   def write_row(self, table, columns):
     self.__debug('Writing Row to Table ' + table, 4)
     query = 'INSERT INTO ' + table + ' VALUES(?,?,?,?,?)'
@@ -148,10 +169,9 @@ class Log(object):
 class BBS(object):
   def __clearInBuffer(self):
     self.inbuffer = ""
-  def __debug(self, message, level=0):
-    if level <= self.debuglevel:
-      decoded = message.encode('string_escape')
-      print self.threadid, decoded
+  def __debug(self, message, level=1):
+    if self.debug:
+      self.debug.write(message, level)
   def __config(self):
     config = Config()
     self.config = config
@@ -170,11 +190,15 @@ class BBS(object):
     self.echo = True
     self.threadid = self.__getthreadid()
     self.__config()
+    self.debug = Debug(self.debuglevel, self.threadid)
     self.__debug("BBS Initialized", 1)
     self.__clearInBuffer()
   def recv(self):
     data = self.socket.recv(32)
-    if data: self.__debug("recv>"+data, 9)
+    if data: 
+      self.__debug("recv>"+data, 9)
+    else:
+      raise EOFError()
     return data
   def send(self, data):
     self.socket.send(data)
@@ -201,14 +225,15 @@ class BBS(object):
   def readLine(self, prompt=None):
     if prompt: self.writePrompt(prompt)
     while True:
+      brk = self.inbuffer.find(BRK)
       cr = self.inbuffer.find(CR)
       lf = self.inbuffer.find(LF)
-      if cr > -1 or lf > -1: break
+      if brk > -1 or cr > -1 or lf > -1: break
       self.fillbuffer()
     if cr < 0:   #only an LF was received
-      i = lf; j = lf + 1; nl = CR
+      i = lf; j = lf + 1; nl = LF
     elif lf < 0: #only a CR was recieved
-      i = cr; j = cr + 1; nl = LF
+      i = cr; j = cr + 1; nl = CR
     else:        #both a CR and LF were received
       if lf < cr:         #LF is first
         i = lf; j = lf + 1; nl = LF
@@ -224,7 +249,7 @@ class BBS(object):
       elif bs: line = line[:bs-1] + line[bs+1:]
       else: line = line[1:]
     self.__debug("read>"+line+nl, 8)
-    if nl == LF: self.write(CR+LF)
+    if nl == CR: self.write(LF) #Write LF if only CR received
     return line
   def readCommand(self, prompt='Command>'):
     command = self.readLine(prompt).strip().upper()
@@ -256,7 +281,7 @@ class BBS(object):
         self.username = username
       else:
         time.sleep(.5)
-        self.writeLine("Invalid User Name")
+        self.writeLine('Invalid User Name')
     self.__debug("Logged in as "+self.username, 2)
     self.log.write('User ' + self.username + ' logged in')
   def info(self):
@@ -273,110 +298,162 @@ class BBS(object):
       else:
         self.menu(command)
   def main_menu(self, command):
-      if command == 'HELP' or command == '?':
-        self.writeLine('HELP Display this text')
-        if self.filedir: self.writeLine('FILE Enter File Library')
-        self.writeLine('MAIL Electronic Mail')
-        self.writeLine('USER Display user info')
-        self.writeLine('QUIT Log out of BBS')        
-      elif command == 'USER' or command == 'U':
-        self.writeLine('User Name: '+self.username)
-        self.writeLine('IP Address: '+self.user_ip)
-        self.writeLine('Online for '+str(self.elapsed())+' seconds')
-      elif command == 'FILE' or command == 'F':
-        if self.filedir:
-          self.writeLine('Entering File Library')        
-          self.menu = self.file_menu
-        else: self.writeLine('File Library Not Available')
-      elif command == 'MAIL' or command == 'M':
-          self.writeLine('Electronic Mail Menu')        
-          self.menu = self.mail_menu
+    if command == 'HELP' or command == '?':
+      self.writeLine('HELP Display this text')
+      self.writeLine('LIST Forum Message List')
+      self.writeLine('READ Read Forum Message')
+      self.writeLine('NEXT Read Next Message')
+      self.writeLine('POST Post Forum Message')
+      if self.filedir: self.writeLine('FILE File Library Menu')
+      self.writeLine('MAIL Electronic Mail Menu')
+      self.writeLine('USER Display user info')
+      self.writeLine('QUIT Log out of BBS')
+    elif command == 'USER' or command == 'U':
+      self.writeLine('User Name: '+self.username)
+      self.writeLine('IP Address: '+self.user_ip)
+      self.writeLine('Online for '+str(self.elapsed())+' seconds')
+    elif command == 'FILE' or command == 'F':
+      if self.filedir:
+        self.writeLine('Entering File Library')        
+        self.menu = self.file_menu
+      else: self.writeLine('File Library Not Available')
+    elif command == 'MAIL' or command == 'M':
+        self.writeLine('Electronic Mail Menu')        
+        self.menu = self.mail_menu
+    elif command == 'LIST' or command == 'L':
+      criteria = {'SUBFORUM': self.subforum}
+      rows = self.db.read_rows('FORUM', criteria)
+      for row in rows:
+        (rowid, subforum, userid, timestamp, subject, message) = row
+        msgno = str(rowid)
+        date_time = datetime.fromtimestamp(timestamp).strftime('%m/%d/%y %H:%M')
+        self.writeLine(msgno + ' - ' + userid + ' - ' + subject)
+    elif command == 'POST' or command == 'P':
+      subforum = 0
+      userid = self.username
+      subject = self.readLine('Subject:')
+      if not subject: return
+      block = self.readBlock('Message')
+      message = '\n'.join(block)
+      timestamp = time.mktime(time.localtime())
+      columns = (subforum, userid, timestamp, subject, message)
+      self.db.write_row('FORUM', columns)
+    elif command in {'READ', 'R', 'NEXT', 'N'}:
+      if command == 'READ' or command == 'R':
+        while True:
+          try:
+            self.msgno = int(self.readLine('Message#:'))
+            break
+          except ValueError as x:
+            self.writeLine('Invalid entry')
       else:
-        self.writeLine('Invalid command.')
+        self.writeLine('Message#: ' + str(self.msgno))
+      criteria = {'SUBFORUM': self.subforum, 'ROWID': self.msgno}
+      row = self.db.read_row('FORUM', criteria)
+      if row:
+        (rowid, subforum, userid, timestamp, subject, message) = row
+        date_time = datetime.fromtimestamp(timestamp).strftime('%m/%d/%y %H:%M')
+        block = message.split('\n')
+        self.writeLine('User: ' + userid)
+        self.writeLine('Date: ' + date_time)
+        self.writeLine('Subject: ' + subject)
+        self.writeBlock(block)
+        self.msgno += 1
+      else:
+        self.writeLine('Message Not Found')
+    else:
+      self.writeLine('Invalid command.')
   def file_menu(self, command):
-      if command == 'HELP' or command == '?':
-        self.writeLine('HELP Display this text')
-        self.writeLine('LIST Display File List')
-        self.writeLine('READ Read File Contents')
-        self.writeLine('EXIT Return to Main Menu')
-      elif command == 'LIST' or command == 'L':
-        files = os.listdir(self.filedir)
-        if len(files):
-          self.writeLine('File           Date   Size')
-          for file in files:
-            spec = os.path.join(self.filedir, file)
-            stat = os.stat(spec)
-            date = datetime.fromtimestamp(stat.st_ctime).strftime(' %m/%d/%y ')
-            size = str(stat.st_size)
-            line = file.ljust(12) + date + size
-            self.writeLine(line)
-        else:
-          self.writeLine('No Files in Library')
-      elif command == 'READ' or command == 'R':
-        name = self.readCommand("File Name?")
-        spec = os.path.join(self.filedir, name)
-        try:
-          with open(spec) as file:
-            for line in file:
-              self.writeLine(line.strip())
-        except IOError as err:
-          self.writeLine("Error Opening File " + name)
-      elif command == 'EXIT' or command == 'X':
-        self.writeLine('Exiting File Library')        
-        self.menu = self.main_menu
+    if command == 'HELP' or command == '?':
+      self.writeLine('HELP Display this text')
+      self.writeLine('LIST Display File List')
+      self.writeLine('READ Read File Contents')
+      self.writeLine('EXIT Return to Main Menu')
+    elif command == 'LIST' or command == 'L':
+      files = os.listdir(self.filedir)
+      if len(files):
+        self.writeLine('File           Date   Size')
+        for file in files:
+          spec = os.path.join(self.filedir, file)
+          stat = os.stat(spec)
+          date = datetime.fromtimestamp(stat.st_ctime).strftime(' %m/%d/%y ')
+          size = str(stat.st_size)
+          line = file.ljust(12) + date + size
+          self.writeLine(line)
       else:
-        self.writeLine('Invalid command.')
+        self.writeLine('No Files in Library')
+    elif command == 'READ' or command == 'R':
+      name = self.readCommand("File Name?")
+      spec = os.path.join(self.filedir, name)
+      try:
+        with open(spec) as file:
+          for line in file:
+            self.writeLine(line.rstrip())
+      except IOError as err:
+        self.writeLine("Error Opening File " + name)
+    elif command == 'EXIT' or command == 'X':
+      self.writeLine('Exiting File Library')        
+      self.menu = self.main_menu
+    else:
+      self.writeLine('Invalid command.')
   def mail_menu(self, command):
-      if command == 'HELP' or command == '?':
-        self.writeLine('HELP Display this text')
-        self.writeLine('LIST Display Message List')
-        self.writeLine('READ Read Email Message')
-        self.writeLine('SEND Send Email Messages')
-        self.writeLine('EXIT Return to Main Menu')
-      elif command == 'LIST' or command == 'L':
-        criteria = {'RECIPIENT': self.username}
-        rows = self.db.read_rows('EMAIL', criteria)
-        for row in rows:
-          (sender, recipient, timestamp, subject, message) = row 
-          date_time = datetime.fromtimestamp(timestamp).strftime('%m/%d/%y %H:%M')
-          self.writeLine(date_time + ' ' + sender + ' - ' + subject)
-      elif command == 'READ' or command == 'R':
-        criteria = {'RECIPIENT': self.username}
-        rows = self.db.read_rows('EMAIL', criteria)
-        for row in rows:
-          (sender, recipient, timestamp, subject, message) = row 
-          date = datetime.fromtimestamp(timestamp).strftime('%m/%d/%y %H:%M')
-          block = message.split('\n')
-          self.writeLine('From: ' + sender)
-          self.writeLine('Date: ' + date)
-          self.writeLine('Subject: ' + subject)
-          self.writeBlock(block)
-          self.readLine('...Enter to Continue...')
-      elif command == 'SEND' or command == 'S':
-        sender = self.username
-        recipient = self.readLine('To User:')
-        if not recipient: return
-        subject = self.readLine('Subject')
-        if not subject: return
-        block = self.readBlock('Message')
-        message = '\n'.join(block)
-        timestamp = time.mktime(time.localtime())
-        columns = (sender, recipient, timestamp, subject, message)
-        self.db.write_row('EMAIL', columns)
-      elif command == 'EXIT' or command == 'X':
-        self.writeLine('Returning to Main Menu')        
-        self.menu = self.main_menu
-      else:
-        self.writeLine('Invalid command.')
+    if command == 'HELP' or command == '?':
+      self.writeLine('HELP Display this text')
+      self.writeLine('LIST Display Message List')
+      self.writeLine('READ Read Email Message')
+      self.writeLine('SEND Send Email Messages')
+      self.writeLine('KILL Delete All Messages')
+      self.writeLine('EXIT Return to Main Menu')
+    elif command == 'KILL' or command == 'K':
+      self.writeLine('KILL not implemented')
+    elif command == 'LIST' or command == 'L':
+      criteria = {'RECIPIENT': self.username}
+      rows = self.db.read_rows('EMAIL', criteria)
+      for row in rows:
+        (rowid, sender, recipient, timestamp, read, subject, message) = row 
+        date_time = datetime.fromtimestamp(timestamp).strftime('%m/%d/%y %H:%M')
+        self.writeLine(date_time + ' ' + sender + ' - ' + subject)
+    elif command == 'READ' or command == 'R':
+      criteria = {'RECIPIENT': self.username}
+      rows = self.db.read_rows('EMAIL', criteria)
+      for row in rows:
+        (rowid, sender, recipient, timestamp, read, subject, message) = row 
+        date = datetime.fromtimestamp(timestamp).strftime('%m/%d/%y %H:%M')
+        block = message.split('\n')
+        self.writeLine('From: ' + sender)
+        self.writeLine('Date: ' + date)
+        self.writeLine('Subject: ' + subject)
+        self.writeBlock(block)
+        self.readLine('...Enter to Continue...')
+    elif command == 'SEND' or command == 'S':
+      sender = self.username
+      recipient = self.readLine('To User:')
+      if not recipient: return
+      subject = self.readLine('Subject:')
+      if not subject: return
+      block = self.readBlock('Message')
+      message = '\n'.join(block)
+      timestamp = time.mktime(time.localtime())
+      read = 0
+      columns = (sender, recipient, timestamp, read, subject, message)
+      self.db.write_row('EMAIL', columns)
+    elif command == 'EXIT' or command == 'X':
+      self.writeLine('Returning to Main Menu')        
+      self.menu = self.main_menu
+    else:
+      self.writeLine('Invalid command.')
   def open_db(self):
-    self.db = Database(self.dbname, self.__debug)
-    self.db.create_table('EMAIL', 'SENDER TEXT, RECIPIENT TEXT, DATETIME REAL, SUBJECT TEXT, MESSAGE')
+    self.db = Database(self.dbname, self.debug)
+    self.db.create_table('EMAIL', 'SENDER TEXT, RECIPIENT TEXT, UNIXTIME REAL, READ INTEGER, SUBJECT TEXT, MESSAGE')
+    self.db.create_table('FORUM', 'SUBFORUM INTEGER, USERID TEXT, UNIXTIME REAL, SUBJECT TEXT, MESSAGE')
   def start(self):
     self.log = Log(self.threadid)
     self.log.open(self.config.getstr('BBS', 'LOGFILE'))
     self.log.write('Connection from ' + self.user_ip + ' on Port ' + str(self.user_port))
     self.__debug("BBS Started", 1)
     self.time_login = time.time()
+    self.subforum = 0
+    self.msgno = 1
     self.enabletimeout()
     self.open_db()
     try:
@@ -392,25 +469,31 @@ class BBS(object):
       errno, errmsg = err
       message = "Socket Error {0:} - {1:}".format(errno, errmsg)
       self.__debug(message, 1)
+    except EOFError as err:
+      self.__debug("Socket closed", 1)
+      self.log.write("Socket closed")
     except KeyboardInterrupt:
-      print "\nCaught Keyboard Interrupt"
+      self.__debug("\nCaught Keyboard Interrupt", 1)
     self.__debug("BBS Exited", 1)
+    self.log.write("BBS Exited")
 
 class BBS_Handler(SocketServer.BaseRequestHandler):
   def handle(self):
     socket = self.request
     bbs = BBS(socket)
     bbs.start()
-      
-class BBS_Server(SocketServer.TCPServer):
+
+class BBS_Server(SocketServer.ThreadingTCPServer):
   allow_reuse_address = True
 
 if __name__ == "__main__":
   config = Config()
+  debug = config.getstr('SERVER', 'DEBUG')
   ipaddr = config.getstr('SERVER', 'IPADDR')
   port = config.getint('SERVER', 'PORT')
   log = Log()
   log.open(config.getstr('SERVER', 'LOGFILE'))
+  
   server = BBS_Server((ipaddr, port), BBS_Handler)
   ipaddr, port = server.server_address
   log.write('Server Opened on ' + ipaddr + ' Port ' + str(port))
@@ -422,4 +505,3 @@ if __name__ == "__main__":
     log.write('Server terminated by keyboard interrupt')
   print 'Exiting Server'
   quit()
-
