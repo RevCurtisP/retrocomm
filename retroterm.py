@@ -10,10 +10,11 @@ from tkinter import *
 
 DEBUG = 0
 
-print(sys.version_info)
+if DEBUG: print(sys.version_info)
 
 BBSLIST = [
 ["local", "localhost", "2323"],
+["retrobbs", "ohiodivide.com", "2323"],
 ["RetroBBS", "66.172.27.229", "2323"],
 ["Birdbrain BBS", "birdbrainbbs.ufud.org", "64"]
 ]
@@ -357,9 +358,10 @@ class Modem(object):
       data = self.__telnet.read_very_eager()
     except Exception as x:
       self.connected = False
-      data = x.message + "\r"
+      data = bytes(str(x) + "\r", "ASCII")
     return data
   def __write(self, data):
+    data = bytes(data, 'ASCII')      #python2 to python3 patch
     try:
       self.__telnet.write(data)
     except Exception as x:
@@ -368,12 +370,13 @@ class Modem(object):
     #Handle Modem Input and Output
     #executed every self._delay milliseconds to simulate desired bps rate
     if self.connected:
-      data = self.__read()          #copy incoming data from modem
-      for char in data:             #to input buffer
-        self.inbuffer.put(char)     #as separate characters
+      data = self.__read()            #copy incoming data from modem
+      for byte in data:               #to input buffer
+        char = chr(byte)              #python2 to python3 patch
+        self.inbuffer.put(char)       #as separate characters
       if not self.outbuffer.empty():
-        char = self.outbuffer.get()  #copy one character from output buffer
-        self.__write(char)        #to modem
+        char = self.outbuffer.get()   #copy one character from output buffer
+        self.__write(char)            #to modem
     else:
       self.disconnect_callback()
     if not self.inbuffer.empty():
@@ -502,6 +505,7 @@ class Term(Tk):
   def __init__(self):
     Tk.__init__(self)
     self.echo = IntVar()
+    #self.iconbitmap('retroterm.ico')
     self.title("RetroTerm")
     self.modem = Modem(self.__inChar, self.after, self.__disconnected)
     self.ui = UI(self, self.__uiDefault, self.__uiButton)
