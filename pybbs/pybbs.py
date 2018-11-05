@@ -22,7 +22,8 @@ DEFAULT_CONFIG = {
 'DEBUG': "4",
 'LOGFILE': None,
 'FILEDIR': None,
-'DBNAME': "pybbs.db"
+'DBNAME': "pybbs.db",
+'CHAT': True
 }
 
 DATE_FORMAT = '%Y-%m-%d'
@@ -95,8 +96,12 @@ class Debug(object):
     self.threadid = threadid
   def write(self, message, level=1):
     if level <= self.level:
-      decoded = message.encode('unicode_escape')
-      print self.threadid, decoded
+      if type(message) == unicode: encoding = 'unicode_escape'
+      elif type(message) == string: encoding = 'string_escape'
+      else: encoding = None
+      if encoding:
+        message = message.encode(encoding, 'ignore')
+      print str(self.threadid) + ' ' + message
 
 class Database(object):
   def __debug(self, message, level=1):
@@ -136,7 +141,9 @@ class Database(object):
     return rows
   def write_row(self, table, columns):
     self.__debug('Writing Row to Table ' + table, 4)
-    query = 'INSERT INTO ' + table + ' VALUES(?,?,?,?,?)'
+    qmarks = ['?'] * len(columns)
+    subst = ",".join(qmarks)
+    query = 'INSERT INTO ' + table + ' VALUES(' + subst + ')'
     self.__debug('Query: ' + query)
     self.__debug('Columns: ' + str(columns))
     self.crsr.execute(query, columns)
@@ -179,6 +186,7 @@ class BBS(object):
     self.timeout = config.getint('BBS', 'TIMEOUT')
     self.filedir = config.getstr('BBS', 'FILEDIR')
     self.dbname = config.getstr('BBS', 'DBNAME')
+    self.chat = config.getint('BBS', 'CHAT')
   def __getthreadid(self):
     thread = threading.current_thread()
     threadid = thread.ident
@@ -193,8 +201,12 @@ class BBS(object):
     self.debug = Debug(self.debuglevel, self.threadid)
     self.__debug("BBS Initialized", 1)
     self.__clearInBuffer()
-  def recv(self):
-    data = self.socket.recv(32)
+  def recv(self, timeout=False):
+    try: 
+      data = self.socket.recv(32)
+    except socket.timeout as x:
+      if timeout: return None
+      else: raise EORError()
     if data: 
       self.__debug("recv>"+data, 9)
     else:
@@ -217,19 +229,29 @@ class BBS(object):
     self.writeLine()
     for line in block:
       self.writeLine(line)
-  def fillbuffer(self):
-    data = self.recv()
+  def fillbuffer(self, timeout=None):
+    if timeout: 
+      oldTimeout = self.socket.gettimeout()
+      self.socket.settimeout(timeout)
+    data = self.recv(timeout)
     if data:
       self.inbuffer += data
       if self.echo: self.send(data)
-  def readLine(self, prompt=None):
+    if timeout: 
+      self.socket.settimeout(oldTimeout)
+  def telnetCommands(self):
+    return
+  def readLine(self, prompt=None, timeout=None):
     if prompt: self.writePrompt(prompt)
     while True:
+      self.telnetCommands()
       brk = self.inbuffer.find(BRK)
       cr = self.inbuffer.find(CR)
       lf = self.inbuffer.find(LF)
       if brk > -1 or cr > -1 or lf > -1: break
-      self.fillbuffer()
+      bufferlen = len(self.inbuffer)
+      self.fillbuffer(timeout)
+      if timeout and len(self.inbuffer) == bufferlen: return None
     if cr < 0:   #only an LF was received
       i = lf; j = lf + 1; nl = LF
     elif lf < 0: #only a CR was recieved
@@ -286,6 +308,39 @@ class BBS(object):
     self.log.write('User ' + self.username + ' logged in')
   def info(self):
     self.writeLine("Enter ? for Help")
+  def chatroom(self):
+    address = ('localhost', 9999)
+    skt = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    skt.settimeout(.1)
+    try:
+      skt.connect(address)
+      skt.sendall(self.username)
+    except Exception as x:
+      self.__debug("Error " + str(x) + " connecting to chat server ", 2)
+    newline = None
+    while True:
+      self.fillbuffer(.1)
+      try:
+        if len(self.inbuffer):
+          line = self.readLine(timeout=5)
+          if line: 
+            skt.sendall(line)
+            newline = None
+          else: 
+            if newline == None: newline = True
+        line = skt.recv(1024)
+        if line:
+          if str(line).find(self.username+":"):
+            if newline:
+              self.writeLine('')
+              newline = False
+            self.writeLine(line)
+        else: break
+      except socket.timeout as x:
+        continue
+      except Exception as x:
+        self.__debug("Error " + str(x) + " communicating with chat server")
+    skt.close()
   def main(self):
     self.menu = self.main_menu
     while True:
@@ -304,6 +359,7 @@ class BBS(object):
       self.writeLine('READ Read Forum Message')
       self.writeLine('NEXT Read Next Message')
       self.writeLine('POST Post Forum Message')
+      if self.chat: self.writeLine('CHAT Enter Chat Room')
       if self.filedir: self.writeLine('FILE File Library Menu')
       self.writeLine('MAIL Electronic Mail Menu')
       self.writeLine('USER Display user info')
@@ -312,6 +368,8 @@ class BBS(object):
       self.writeLine('User Name: '+self.username)
       self.writeLine('IP Address: '+self.user_ip)
       self.writeLine('Online for '+str(self.elapsed())+' seconds')
+    elif command == 'CHAT' or command == 'C':
+      self.chatroom()
     elif command == 'FILE' or command == 'F':
       if self.filedir:
         self.writeLine('Entering File Library')        
@@ -486,22 +544,91 @@ class BBS_Handler(SocketServer.BaseRequestHandler):
 class BBS_Server(SocketServer.ThreadingTCPServer):
   allow_reuse_address = True
 
+class ChatServer(object):
+  clients = {}
+  addresses = {}
+  HOST = 'localhost'
+  PORT = 9999
+  BUFSIZ = 1024
+  MAX_CLIENTS = 5
+  def __debug(self, message, level=1):
+    if self.debug:
+      self.debug.write(message, level)
+  def __init__(self):
+    self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  def accept_incoming_connections(self):
+    """Sets up handling for incoming clients."""
+    while True:
+      client, address = self.server.accept()
+      host, port = address
+      self.__debug("Client connected from " + host + " on Port " + str(port), 2)
+      #client.send(bytes("NAME?"))
+      self.addresses[client] = address
+      threading.Thread(target=self.handle_client, args=(client,)).start()
+  def handle_client(self, client): 
+    """Handles a single client connection."""
+    try:
+      name = str(client.recv(self.BUFSIZ))
+    except Exception as x:
+      self.__debug("Error " + str(x) + " communicating with client", 2)
+      del self.clients[client]
+      del self.addresses[client]
+      return
+    client.send(bytes("Type .quit to exit chat."))
+    self.broadcast(bytes("%s has joined the chat!" % name))
+    self.clients[client] = name
+    while True:
+      try:
+        msg = client.recv(self.BUFSIZ)
+      except Exception as x:
+        msg = None
+      if msg and msg != bytes(".quit"):
+        self.broadcast(msg, name + ": ")
+      else:
+        client.close()
+        del self.clients[client]
+        self.broadcast(bytes("%s has left the chat." % name))
+        host, port = self.addresses[client]
+        del self.addresses[client]
+        self.__debug("Client disconnected from " + host + " on Port " + str(port), 2)
+        break
+  def broadcast(self, msg, prefix=""):
+    """Broadcasts a message to all the clients."""
+    for sock in self.clients:
+      sock.send(bytes(prefix) + msg)
+  def start(self):
+    self.threadid = threading.current_thread().ident
+    self.debuglevel = 2
+    self.debug = Debug(self.debuglevel, self.threadid)
+    self.server.bind((self.HOST, self.PORT))
+    self.__debug("Chat Server bound to " + self.HOST + " on Port " + str(self.PORT), 1)
+    self.server.listen(self.MAX_CLIENTS)
+    self.__debug("Waiting for connection...", 1)
+    accept_thread = threading.Thread(target=self.accept_incoming_connections)
+    accept_thread.start()  # Starts the infinite loop.
+    accept_thread.join()
+    self.server.close()
+
 if __name__ == "__main__":
   config = Config()
   debug = config.getstr('SERVER', 'DEBUG')
   ipaddr = config.getstr('SERVER', 'IPADDR')
   port = config.getint('SERVER', 'PORT')
+  debuglevel = config.getint('SERVER', 'DEBUG')
+  debug = Debug(debuglevel)
   log = Log()
   log.open(config.getstr('SERVER', 'LOGFILE'))
-  
+  if config.getint('CHAT', 'CHAT'):
+    chatServer = ChatServer()
+    threading.Thread(target=chatServer.start).start()
   server = BBS_Server((ipaddr, port), BBS_Handler)
   ipaddr, port = server.server_address
   log.write('Server Opened on ' + ipaddr + ' Port ' + str(port))
-  print "Listening on {0:} port {1:}".format(ipaddr, port)
+  debug.write("Listening on {0:} port {1:}".format(ipaddr, port), 1)
   try:
     server.serve_forever()
   except KeyboardInterrupt:
-    print "\nCaught Keyboard Interrupt"
+    debug.write("\nCaught Keyboard Interrupt", 1)
     log.write('Server terminated by keyboard interrupt')
   print 'Exiting Server'
   quit()
