@@ -1,20 +1,22 @@
 #!/usr/bin/python
 '''Retro Terminal Program '''
 
-import queue
+import sys
+python3 = sys.version_info.major == 3
+
+if python3: import queue
+else: import Queue as queue
 import socket
 import string
-import sys
 import telnetlib as tl
-from tkinter import *
+if python3: from tkinter import *
+else: from tkinter import *
 
 DEBUG = 0
 
-if DEBUG: print(sys.version_info)
-
 BBSLIST = [
-["local", "localhost", "2323"],
 ["retrobbs", "ohiodivide.com", "2323"],
+["local", "localhost", "2323"],
 ["RetroBBS", "66.172.27.229", "2323"],
 ["Birdbrain BBS", "birdbrainbbs.ufud.org", "64"]
 ]
@@ -358,10 +360,11 @@ class Modem(object):
       data = self.__telnet.read_very_eager()
     except Exception as x:
       self.connected = False
-      data = bytes(str(x) + "\r", "ASCII")
+      if python3: data = bytes(str(x) + "\r", "ASCII")
+      else: data = x.message
     return data
   def __write(self, data):
-    data = bytes(data, 'ASCII')      #python2 to python3 patch
+    if python3: data = bytes(data, 'ASCII')
     try:
       self.__telnet.write(data)
     except Exception as x:
@@ -371,8 +374,8 @@ class Modem(object):
     #executed every self._delay milliseconds to simulate desired bps rate
     if self.connected:
       data = self.__read()            #copy incoming data from modem
-      for byte in data:               #to input buffer
-        char = chr(byte)              #python2 to python3 patch
+      for char in data:               #to input buffer
+        if python3: char = chr(char)              
         self.inbuffer.put(char)       #as separate characters
       if not self.outbuffer.empty():
         char = self.outbuffer.get()   #copy one character from output buffer
@@ -397,7 +400,8 @@ class Modem(object):
     except ValueError as x:
       result = "Invalid Port"
     except Exception as x:
-      result = str(x)
+      if python3: result = str(x)
+      else: result = x.message
     self.__echo(result)
     self.__timer()
   def disconnect(self):
