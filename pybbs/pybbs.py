@@ -10,6 +10,7 @@ import socket
 import SocketServer
 import sqlite3
 import string
+import sys
 import threading
 import time
 
@@ -96,12 +97,14 @@ class Debug(object):
     self.threadid = threadid
   def write(self, message, level=1):
     if level <= self.level:
+      timestamp = datetime.now().strftime('%m/%d %H:%M')
       if type(message) == unicode: encoding = 'unicode_escape'
-      elif type(message) == string: encoding = 'string_escape'
+      elif type(message) == str: encoding = 'string_escape'
       else: encoding = None
       if encoding:
         message = message.encode(encoding, 'ignore')
-      print str(self.threadid) + ' ' + message
+      sys.stdout.write(str(self.threadid) + ' ' + timestamp + ' ' + message + '\n')
+
 
 class Database(object):
   def __debug(self, message, level=1):
@@ -112,40 +115,60 @@ class Database(object):
     self.conn = sqlite3.connect(dbname)
     self.crsr = self.conn.cursor()
   def execute(self, query):
-    self.__debug('Executing Query: ' + query, 6)
+    self.__debug('Executing Query: ' + query, 4)
     self.crsr.execute(query)
     self.conn.commit()
   def create_table(self, table, columns):
-    self.__debug('Creating Database Table ' + table, 4)
+    self.__debug('Creating Database Table ' + table, 3)
     query = 'CREATE TABLE IF NOT EXISTS ' + table + ' ( ' + columns +' )'
     self.execute(query)
   def read_row(self, table, criteria):
     rows = self.read_rows(table, criteria, 1)
     return rows[0] if len(rows) else None
   def read_rows(self, table, criteria, limit=None):
-    self.__debug('Reading Rows from Table ' + table, 4)
-    self.__debug('With Criteria ' + str(criteria), 4)
-    where = []
+    self.__debug('Reading Rows from Table ' + table, 3)
+    self.__debug('With Criteria ' + str(criteria), 3)
+    cols = []
     what = []
     for column, value in criteria.items():
-      where.append(column + '=?')
+      cols.append(column + '=?')
       what.append(value)
-    query = 'SELECT rowid,* FROM ' + table + ' WHERE ' + ' AND '.join(where)
+    where = ' AND '.join(cols)
+    query = 'SELECT rowid,* FROM ' + table + ' WHERE ' + where
     if limit: query += ' LIMIT ' + str(limit)
-    columns = tuple(what)
-    self.__debug('Query: ' + query, 4)
-    self.__debug('Columns: ' + str(columns), 4)
-    self.crsr.execute(query, columns)
+    col = tuple(what)
+    self.__debug('Query: ' + query, 3)
+    self.__debug('Columns: ' + str(col), 3)
+    self.crsr.execute(query, col)
     rows = self.crsr.fetchall()
-    self.__debug('Read Rows ' + str(rows), 4)
+    self.__debug('Read Rows ' + str(rows), 3)
     return rows
+  def update_row(self, table, criteria, columns):
+    self.__debug('Writing Row to Table ' + table, 3)
+    what = []
+    cols = []
+    sets = []
+    for column, value in columns.items():
+      sets.append(column + '=?')
+      what.append(value)
+    set = ", ".join(sets)
+    for column, value in criteria.items():
+      cols.append(column + '=?')
+      what.append(value)
+    where = ' AND '.join(cols)
+    col = tuple(what)
+    query = 'UPDATE ' + table + ' SET ' + set + ' WHERE ' + where
+    self.__debug('Query: ' + query, 3)
+    self.__debug('Columns: ' + str(col), )
+    self.crsr.execute(query, col)
+    self.conn.commit()    
   def write_row(self, table, columns):
-    self.__debug('Writing Row to Table ' + table, 4)
+    self.__debug('Writing Row to Table ' + table, 3)
     qmarks = ['?'] * len(columns)
     subst = ",".join(qmarks)
     query = 'INSERT INTO ' + table + ' VALUES(' + subst + ')'
-    self.__debug('Query: ' + query)
-    self.__debug('Columns: ' + str(columns))
+    self.__debug('Query: ' + query, 3)
+    self.__debug('Columns: ' + str(columns), 3)
     self.crsr.execute(query, columns)
     self.conn.commit()    
 
@@ -208,16 +231,16 @@ class BBS(object):
       if timeout: return None
       else: raise EORError()
     if data: 
-      self.__debug("recv>"+data, 9)
+      self.__debug("recv>"+data, 5)
     else:
       raise EOFError()
     return data
   def send(self, data):
     self.socket.send(data)
-    self.__debug("send>"+data, 9)
+    self.__debug("send>"+data, 5)
   def write(self, data=None):
     if data:
-       self.__debug("write>"+data, 8)
+       self.__debug("write>"+data, 4)
        self.send(data)
   def writeClearScreen():
     self.write(FF+BS)
@@ -270,12 +293,12 @@ class BBS(object):
       if bs < 0: break                            
       elif bs: line = line[:bs-1] + line[bs+1:]
       else: line = line[1:]
-    self.__debug("read>"+line+nl, 8)
+    self.__debug("read>"+line+nl, 4)
     if nl == CR: self.write(LF) #Write LF if only CR received
     return line
   def readCommand(self, prompt='Command>'):
     command = self.readLine(prompt).strip().upper()
-    self.__debug("Received command "+command, 2)
+    self.__debug("Received command "+command, 3)
     return command
   def readBlock(self, desc='Text'):
     block = []
@@ -294,7 +317,7 @@ class BBS(object):
   def welcome(self):
     self.writeLine(CLRSCRN + WELCOME)
   def login(self):
-    self.__debug("Authenticating", 2)
+    self.__debug("Authenticating", 3)
     self.username = None
     while not self.username:
       username = self.readLine("User Name:",).strip()
@@ -306,6 +329,19 @@ class BBS(object):
         self.writeLine('Invalid User Name')
     self.__debug("Logged in as "+self.username, 2)
     self.log.write('User ' + self.username + ' logged in')
+    now = time.mktime(time.localtime())
+    row = self.db.read_row('USERS', {'USERID': self.username})
+    if row:
+      (rowid, userid, password, role, timestamp, msgno) = row
+      if msgno: self.msgno = msgno
+      date_time = datetime.fromtimestamp(timestamp).strftime('%m/%d/%y %H:%M')
+      self.writeLine('Last login ' + date_time)
+      self.db.update_row('USERS', {'USERID': self.username}, {'UNIXTIME': now})
+    else:
+      self.password = ''
+      columns = (self.username, self.password, 'USER', now, self.msgno)
+      self.db.write_row('USERS', columns)
+
   def info(self):
     self.writeLine("Enter ? for Help")
   def chatroom(self):
@@ -339,7 +375,7 @@ class BBS(object):
       except socket.timeout as x:
         continue
       except Exception as x:
-        self.__debug("Error " + str(x) + " communicating with chat server")
+        self.__debug("Error " + str(x) + " communicating with chat server", 2)
     skt.close()
   def main(self):
     self.menu = self.main_menu
@@ -353,7 +389,13 @@ class BBS(object):
       else:
         self.menu(command)
   def main_menu(self, command):
-    if command == 'HELP' or command == '?':
+    if command == '?':
+      line = '[H]ELP, [L]IST, [R]EAD, [N]EXT, [P]OST, '
+      if self.chat: line += '[C]HAT, '
+      if self.filedir: line += '[F]ILE, '
+      line += '[M]AIL, [U]SER, [Q]UIT'
+      self.writeLine(line)
+    elif command == 'HELP' or command == 'H':
       self.writeLine('HELP Display this text')
       self.writeLine('LIST Forum Message List')
       self.writeLine('READ Read Forum Message')
@@ -417,12 +459,15 @@ class BBS(object):
         self.writeLine('Subject: ' + subject)
         self.writeBlock(block)
         self.msgno += 1
+        self.db.update_row('USERS', {'USERID': self.username}, {'MSGNO': self.msgno})
       else:
         self.writeLine('Message Not Found')
     else:
       self.writeLine('Invalid command.')
   def file_menu(self, command):
-    if command == 'HELP' or command == '?':
+    if command == '?':
+      self.writeLine('[H]ELP, [L]IST, [R]EAD, E[X]IT')
+    elif command == 'HELP' or command == 'H':
       self.writeLine('HELP Display this text')
       self.writeLine('LIST Display File List')
       self.writeLine('READ Read File Contents')
@@ -455,34 +500,45 @@ class BBS(object):
     else:
       self.writeLine('Invalid command.')
   def mail_menu(self, command):
-    if command == 'HELP' or command == '?':
+    if command == '?':
+      self.writeLine('[H]ELP, [L]IST, [N]EXT, [R]EAD, [S]END, E[X]IT')
+    elif command == 'HELP' or command == 'H':
       self.writeLine('HELP Display this text')
       self.writeLine('LIST Display Message List')
-      self.writeLine('READ Read Email Message')
-      self.writeLine('SEND Send Email Messages')
-      self.writeLine('KILL Delete All Messages')
+      self.writeLine('READ Read Email Messages')
+      self.writeLine('SEND Send Email Message')
+      #self.writeLine('KILL Delete All Messages')
       self.writeLine('EXIT Return to Main Menu')
     elif command == 'KILL' or command == 'K':
       self.writeLine('KILL not implemented')
     elif command == 'LIST' or command == 'L':
       criteria = {'RECIPIENT': self.username}
       rows = self.db.read_rows('EMAIL', criteria)
-      for row in rows:
-        (rowid, sender, recipient, timestamp, read, subject, message) = row 
-        date_time = datetime.fromtimestamp(timestamp).strftime('%m/%d/%y %H:%M')
-        self.writeLine(date_time + ' ' + sender + ' - ' + subject)
+      if len(rows):
+        for row in rows:
+          (rowid, sender, recipient, timestamp, read, subject, message) = row
+          status = ' ' if read else '*'
+          date_time = datetime.fromtimestamp(timestamp).strftime('%m/%d/%y %H:%M')
+          self.writeLine(status + ' ' + date_time + ' ' + sender + ' - ' + subject)
+      else:
+        self.writeLine('No mail found')
     elif command == 'READ' or command == 'R':
-      criteria = {'RECIPIENT': self.username}
-      rows = self.db.read_rows('EMAIL', criteria)
-      for row in rows:
-        (rowid, sender, recipient, timestamp, read, subject, message) = row 
-        date = datetime.fromtimestamp(timestamp).strftime('%m/%d/%y %H:%M')
-        block = message.split('\n')
-        self.writeLine('From: ' + sender)
-        self.writeLine('Date: ' + date)
-        self.writeLine('Subject: ' + subject)
-        self.writeBlock(block)
-        self.readLine('...Enter to Continue...')
+      rows = self.db.read_rows('EMAIL', {'RECIPIENT': self.username, 'READ': 0})
+      if len(rows) == 0:
+        rows = self.db.read_rows('EMAIL', {'RECIPIENT': self.username})
+      if len(rows):
+        for row in rows:
+          (rowid, sender, recipient, timestamp, read, subject, message) = row 
+          date = datetime.fromtimestamp(timestamp).strftime('%m/%d/%y %H:%M')
+          block = message.split('\n')
+          self.writeLine('From: ' + sender)
+          self.writeLine('Date: ' + date)
+          self.writeLine('Subject: ' + subject)
+          self.writeBlock(block)
+          self.readLine('...Enter to Continue...')
+          self.db.update_row('EMAIL', {'ROWID': rowid}, {'READ': 1})
+      else:
+        self.writeLine('No mail found')
     elif command == 'SEND' or command == 'S':
       sender = self.username
       recipient = self.readLine('To User:')
@@ -504,6 +560,7 @@ class BBS(object):
     self.db = Database(self.dbname, self.debug)
     self.db.create_table('EMAIL', 'SENDER TEXT, RECIPIENT TEXT, UNIXTIME REAL, READ INTEGER, SUBJECT TEXT, MESSAGE')
     self.db.create_table('FORUM', 'SUBFORUM INTEGER, USERID TEXT, UNIXTIME REAL, SUBJECT TEXT, MESSAGE')
+    self.db.create_table('USERS', 'USERID TEXT, PASSWORD TEXT, ROLE TEXT, UNIXTIME REAL, MSGNO INTEGER')
   def start(self):
     self.log = Log(self.threadid)
     self.log.open(self.config.getstr('BBS', 'LOGFILE'))
@@ -556,15 +613,22 @@ class ChatServer(object):
       self.debug.write(message, level)
   def __init__(self):
     self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    self.server.settimeout(1)
   def accept_incoming_connections(self):
     """Sets up handling for incoming clients."""
-    while True:
-      client, address = self.server.accept()
-      host, port = address
-      self.__debug("Client connected from " + host + " on Port " + str(port), 2)
-      #client.send(bytes("NAME?"))
-      self.addresses[client] = address
-      threading.Thread(target=self.handle_client, args=(client,)).start()
+    while not self.stopped.is_set():
+      try: 
+        client, address = self.server.accept()
+        host, port = address
+        self.__debug("Client connected from " + host + " on Port " + str(port), 2)
+        #client.send(bytes("NAME?"))
+        self.addresses[client] = address
+        threading.Thread(target=self.handle_client, args=(client,)).start()
+      except socket.timeout as x:
+        continue
+      except Exception as x:
+        self.__debug(str(x), 1)
+    self.__debug('Exiting Chat Server', 1)
   def handle_client(self, client): 
     """Handles a single client connection."""
     try:
@@ -600,6 +664,8 @@ class ChatServer(object):
     self.threadid = threading.current_thread().ident
     self.debuglevel = 2
     self.debug = Debug(self.debuglevel, self.threadid)
+    self.stopped = threading.Event()
+    self.__debug("Starting Chat Server", 1)
     self.server.bind((self.HOST, self.PORT))
     self.__debug("Chat Server bound to " + self.HOST + " on Port " + str(self.PORT), 1)
     self.server.listen(self.MAX_CLIENTS)
@@ -608,6 +674,9 @@ class ChatServer(object):
     accept_thread.start()  # Starts the infinite loop.
     accept_thread.join()
     self.server.close()
+  def stop(self):
+    self.__debug("Stopping Chat Server", 1)
+    self.stopped.set()
 
 if __name__ == "__main__":
   config = Config()
@@ -628,7 +697,8 @@ if __name__ == "__main__":
   try:
     server.serve_forever()
   except KeyboardInterrupt:
-    debug.write("\nCaught Keyboard Interrupt", 1)
+    debug.write("Caught Keyboard Interrupt", 1)
     log.write('Server terminated by keyboard interrupt')
-  print 'Exiting Server'
-  quit()
+  chatServer.stop()
+  debug.write('Exiting Server',1)
+  sys.exit()

@@ -1,14 +1,16 @@
-LOGIN
-  There are no passwords. You can use
-  any username you want, meaning anyone
-  can login as anyone.
-  This will change in the future.
-FILE
-  There are no upload/download options
-  yet. This may be added later.
-MAIL
-  Read shows each email sequentially
-  There is no mechanism for marking
-  mail as read at this point.
-MESSAGE BOARDS
-  None Yet. This may be next.
+LOGIN - Usernames are stored,
+but there are no passwords. 
+This will change soon.
+FORUM - No subforums. 
+Messages numbers are 
+sequential starting at 1. 
+The last read sequence is now 
+preserved between sessions.
+FILES - No upload/download 
+options yet. 
+MAIL - If there are unread
+messages, READ shows only
+those, otherwise shows all.
+CHAT - There is a single 
+chatroom with a simple line 
+oriented interface.

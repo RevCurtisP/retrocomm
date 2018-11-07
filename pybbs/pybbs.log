@@ -766,3 +766,257 @@
 2018-11-04 22:07:36 8528: BBS Exited
 2018-11-04 22:07:41 8456: User curtis logged out
 2018-11-04 22:07:41 8456: BBS Exited
+2018-11-05 00:54:46 10744: Server Opened on 127.0.0.1 Port 2323
+2018-11-05 00:54:58 3468: Connection from 127.0.0.1 on Port 57284
+2018-11-05 00:55:01 3468: User curtis logged in
+2018-11-05 00:55:54 10744: Server terminated by keyboard interrupt
+2018-11-05 00:56:01 3404: Server Opened on 127.0.0.1 Port 2323
+2018-11-05 00:56:08 7224: Connection from 127.0.0.1 on Port 57289
+2018-11-05 00:56:10 7224: User curtis logged in
+2018-11-05 00:56:29 7224: User curtis logged out
+2018-11-05 00:56:29 7224: BBS Exited
+2018-11-05 00:56:31 3404: Server terminated by keyboard interrupt
+2018-11-05 00:56:43 2352: Server Opened on 127.0.0.1 Port 2323
+2018-11-05 00:56:59 2848: Connection from 127.0.0.1 on Port 57291
+2018-11-05 00:57:02 2848: User curtis logged in
+2018-11-05 00:57:27 2848: User curtis logged out
+2018-11-05 00:57:27 2848: BBS Exited
+2018-11-05 00:57:38 3364: Server Opened on 127.0.0.1 Port 2323
+2018-11-05 00:57:52 8596: Connection from 127.0.0.1 on Port 57293
+2018-11-05 00:57:55 8596: User curtis logged in
+2018-11-05 00:57:58 8596: User curtis logged out
+2018-11-05 00:57:58 8596: BBS Exited
+2018-11-05 00:59:26 4048: Connection from 127.0.0.1 on Port 57295
+2018-11-05 00:59:30 4048: User curtis logged in
+2018-11-05 01:00:05 4048: User curtis logged out
+2018-11-05 01:00:05 4048: BBS Exited
+2018-11-05 01:01:34 7776: Server Opened on 127.0.0.1 Port 2323
+2018-11-05 01:01:42 7772: Connection from 127.0.0.1 on Port 57300
+2018-11-05 01:01:45 7772: User curtis logged in
+2018-11-05 01:03:14 7772: User curtis logged out
+2018-11-05 01:03:14 7772: BBS Exited
+2018-11-05 23:25:19 612: Server Opened on 127.0.0.1 Port 2323
+2018-11-05 23:26:16 9456: Server Opened on 127.0.0.1 Port 2323
+2018-11-05 23:27:01 9456: Server terminated by keyboard interrupt
+2018-11-05 23:27:14 7812: Server Opened on 127.0.0.1 Port 2323
+2018-11-05 23:27:21 7812: Server terminated by keyboard interrupt
+2018-11-05 23:41:09 7200: Server Opened on 127.0.0.1 Port 2323
+2018-11-05 23:41:10 7200: Server terminated by keyboard interrupt
+2018-11-05 23:42:42 12696: Server Opened on 127.0.0.1 Port 2323
+2018-11-05 23:42:43 12696: Server terminated by keyboard interrupt
+2018-11-05 23:49:26 6956: Server Opened on 127.0.0.1 Port 2323
+2018-11-05 23:49:27 6956: Server terminated by keyboard interrupt
+2018-11-05 23:50:08 13976: Server Opened on 127.0.0.1 Port 2323
+2018-11-05 23:50:09 13976: Server terminated by keyboard interrupt
+2018-11-05 23:50:24 2000: Server Opened on 127.0.0.1 Port 2323
+2018-11-05 23:50:27 2000: Server terminated by keyboard interrupt
+2018-11-05 23:53:17 7888: Server Opened on 127.0.0.1 Port 2323
+2018-11-05 23:53:19 7888: Server terminated by keyboard interrupt
+2018-11-05 23:56:03 4668: Server Opened on 127.0.0.1 Port 2323
+2018-11-05 23:56:04 4668: Server terminated by keyboard interrupt
+2018-11-05 23:56:12 11468: Server Opened on 127.0.0.1 Port 2323
+2018-11-05 23:57:25 11956: Server Opened on 127.0.0.1 Port 2323
+2018-11-05 23:57:26 11956: Server terminated by keyboard interrupt
+2018-11-05 23:57:41 1816: Server Opened on 127.0.0.1 Port 2323
+2018-11-05 23:57:42 1816: Server terminated by keyboard interrupt
+2018-11-06 00:02:55 2444: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 00:02:56 2444: Server terminated by keyboard interrupt
+2018-11-06 00:04:49 14056: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 00:04:50 14056: Server terminated by keyboard interrupt
+2018-11-06 00:05:56 8696: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 00:05:57 8696: Server terminated by keyboard interrupt
+2018-11-06 00:06:13 14320: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 00:06:14 14320: Server terminated by keyboard interrupt
+2018-11-06 00:10:01 10624: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 00:13:09 14260: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 00:13:17 14260: Server terminated by keyboard interrupt
+2018-11-06 00:14:15 13228: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 00:14:17 13228: Server terminated by keyboard interrupt
+2018-11-06 00:16:59 8408: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 00:17:00 8408: Server terminated by keyboard interrupt
+2018-11-06 00:19:15 12032: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 00:19:17 12032: Server terminated by keyboard interrupt
+2018-11-06 00:19:32 10192: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 00:19:36 10192: Server terminated by keyboard interrupt
+2018-11-06 00:20:57 5528: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 00:21:02 5528: Server terminated by keyboard interrupt
+2018-11-06 00:21:07 8724: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 00:21:16 8724: Server terminated by keyboard interrupt
+2018-11-06 00:21:18 6384: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 00:21:29 6384: Server terminated by keyboard interrupt
+2018-11-06 00:22:55 13928: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 00:23:00 13928: Server terminated by keyboard interrupt
+2018-11-06 00:29:25 14048: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 00:29:26 14048: Server terminated by keyboard interrupt
+2018-11-06 00:29:48 9940: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 00:29:49 9940: Server terminated by keyboard interrupt
+2018-11-06 00:30:08 10620: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 00:30:08 10620: Server terminated by keyboard interrupt
+2018-11-06 00:33:34 4484: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 00:33:36 4484: Server terminated by keyboard interrupt
+2018-11-06 00:34:06 14292: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 00:34:08 14292: Server terminated by keyboard interrupt
+2018-11-06 00:37:20 12844: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 00:37:22 12844: Server terminated by keyboard interrupt
+2018-11-06 10:24:10 13368: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 10:24:39 7768: Connection from 127.0.0.1 on Port 64380
+2018-11-06 10:24:44 7768: User curtis logged in
+2018-11-06 10:24:58 7768: User curtis logged out
+2018-11-06 10:24:58 7768: BBS Exited
+2018-11-06 10:25:03 6764: Connection from 127.0.0.1 on Port 64383
+2018-11-06 10:25:10 6764: User jaidex logged in
+2018-11-06 10:25:31 6764: User jaidex logged out
+2018-11-06 10:25:31 6764: BBS Exited
+2018-11-06 10:25:37 3320: Connection from 127.0.0.1 on Port 64385
+2018-11-06 10:25:43 3320: User curtis logged in
+2018-11-06 10:26:33 13368: Server terminated by keyboard interrupt
+2018-11-06 10:26:36 3320: Socket closed
+2018-11-06 10:26:36 3320: BBS Exited
+2018-11-06 10:26:46 10172: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 10:26:48 7212: Connection from 127.0.0.1 on Port 64391
+2018-11-06 10:26:53 7212: User curtis logged in
+2018-11-06 10:27:28 7212: User curtis logged out
+2018-11-06 10:27:28 7212: BBS Exited
+2018-11-06 10:27:33 10172: Server terminated by keyboard interrupt
+2018-11-06 10:35:07 1220: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 10:35:10 13968: Connection from 127.0.0.1 on Port 64434
+2018-11-06 10:35:15 13968: User curtis logged in
+2018-11-06 10:35:43 13968: User curtis logged out
+2018-11-06 10:35:43 13968: BBS Exited
+2018-11-06 10:35:45 1220: Server terminated by keyboard interrupt
+2018-11-06 10:38:06 13652: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 10:38:09 5908: Connection from 127.0.0.1 on Port 64442
+2018-11-06 10:38:13 5908: User curtis logged in
+2018-11-06 10:39:08 13652: Server terminated by keyboard interrupt
+2018-11-06 10:39:11 4508: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 10:39:15 4836: Connection from 127.0.0.1 on Port 64446
+2018-11-06 10:39:18 4836: User curtis logged in
+2018-11-06 10:39:53 4508: Server terminated by keyboard interrupt
+2018-11-06 10:39:57 12920: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 10:39:59 3760: Connection from 127.0.0.1 on Port 64448
+2018-11-06 10:40:04 3760: User curtis logged in
+2018-11-06 10:40:52 12920: Server terminated by keyboard interrupt
+2018-11-06 10:40:56 12856: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 10:40:59 11312: Connection from 127.0.0.1 on Port 64452
+2018-11-06 10:41:03 11312: User curtis logged in
+2018-11-06 10:44:32 11312: User curtis logged out
+2018-11-06 10:44:32 11312: BBS Exited
+2018-11-06 10:45:24 12856: Server terminated by keyboard interrupt
+2018-11-06 10:45:30 10872: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 10:45:32 7540: Connection from 127.0.0.1 on Port 64463
+2018-11-06 10:45:36 7540: User curtis logged in
+2018-11-06 10:45:56 7540: User curtis logged out
+2018-11-06 10:45:56 7540: BBS Exited
+2018-11-06 10:45:58 10872: Server terminated by keyboard interrupt
+2018-11-06 10:46:44 1260: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 10:46:47 7476: Connection from 127.0.0.1 on Port 64466
+2018-11-06 10:46:50 7476: User curtis logged in
+2018-11-06 10:46:58 7476: User curtis logged out
+2018-11-06 10:46:58 7476: BBS Exited
+2018-11-06 10:47:06 1260: Server terminated by keyboard interrupt
+2018-11-06 10:47:10 14324: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 10:47:14 2108: Connection from 127.0.0.1 on Port 64472
+2018-11-06 10:47:17 2108: User curtis logged in
+2018-11-06 10:51:47 2108: User curtis logged out
+2018-11-06 10:51:47 2108: BBS Exited
+2018-11-06 10:51:54 14324: Server terminated by keyboard interrupt
+2018-11-06 10:52:15 11236: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 10:52:21 12356: Connection from 127.0.0.1 on Port 64477
+2018-11-06 10:52:27 12356: User curtis logged in
+2018-11-06 10:52:48 12356: User curtis logged out
+2018-11-06 10:52:48 12356: BBS Exited
+2018-11-06 10:52:54 14188: Connection from 127.0.0.1 on Port 64479
+2018-11-06 10:52:58 14188: User fred logged in
+2018-11-06 10:53:10 14188: User fred logged out
+2018-11-06 10:53:10 14188: BBS Exited
+2018-11-06 10:53:55 11236: Server terminated by keyboard interrupt
+2018-11-06 10:53:57 13604: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 10:54:06 2060: Connection from 127.0.0.1 on Port 64482
+2018-11-06 10:54:10 2060: User fred logged in
+2018-11-06 10:54:38 2060: User fred logged out
+2018-11-06 10:54:38 2060: BBS Exited
+2018-11-06 10:54:43 9624: Connection from 127.0.0.1 on Port 64484
+2018-11-06 10:54:46 9624: User curtis logged in
+2018-11-06 10:55:12 9624: User curtis logged out
+2018-11-06 10:55:12 9624: BBS Exited
+2018-11-06 10:57:57 13604: Server terminated by keyboard interrupt
+2018-11-06 10:58:07 8160: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 10:59:23 8160: Server terminated by keyboard interrupt
+2018-11-06 10:59:53 13268: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 10:59:56 12120: Connection from 127.0.0.1 on Port 64501
+2018-11-06 11:00:02 12120: User curtis logged in
+2018-11-06 11:00:05 12120: User curtis logged out
+2018-11-06 11:00:05 12120: BBS Exited
+2018-11-06 11:02:54 13268: Server terminated by keyboard interrupt
+2018-11-06 11:17:03 3452: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 11:17:06 11880: Connection from 127.0.0.1 on Port 64521
+2018-11-06 11:17:15 11880: User curtis logged in
+2018-11-06 11:17:32 3452: Server terminated by keyboard interrupt
+2018-11-06 11:18:05 12596: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 11:18:07 6516: Connection from 127.0.0.1 on Port 64523
+2018-11-06 11:18:11 6516: User curtis logged in
+2018-11-06 11:18:22 12596: Server terminated by keyboard interrupt
+2018-11-06 11:19:22 1720: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 11:19:25 6888: Connection from 127.0.0.1 on Port 64527
+2018-11-06 11:19:29 6888: User curtis logged in
+2018-11-06 11:19:35 6888: User curtis logged out
+2018-11-06 11:19:35 6888: BBS Exited
+2018-11-06 11:19:40 5676: Connection from 127.0.0.1 on Port 64529
+2018-11-06 11:19:45 5676: User curtis logged in
+2018-11-06 11:19:55 5676: User curtis logged out
+2018-11-06 11:19:55 5676: BBS Exited
+2018-11-06 11:19:57 1720: Server terminated by keyboard interrupt
+2018-11-06 11:20:10 6360: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 11:20:14 12460: Connection from 127.0.0.1 on Port 64531
+2018-11-06 11:20:18 12460: User curtis logged in
+2018-11-06 11:20:43 12460: User curtis logged out
+2018-11-06 11:20:43 12460: BBS Exited
+2018-11-06 11:27:37 6360: Server terminated by keyboard interrupt
+2018-11-06 11:27:40 13968: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 11:27:43 10048: Connection from 127.0.0.1 on Port 64544
+2018-11-06 11:27:46 10048: User curtis logged in
+2018-11-06 11:27:56 13968: Server terminated by keyboard interrupt
+2018-11-06 11:27:59 6220: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 11:28:03 1412: Connection from 127.0.0.1 on Port 64547
+2018-11-06 11:28:08 1412: User curtis logged in
+2018-11-06 11:28:12 1412: User curtis logged out
+2018-11-06 11:28:12 1412: BBS Exited
+2018-11-06 11:30:59 6220: Server terminated by keyboard interrupt
+2018-11-06 11:31:50 14100: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 11:31:52 8628: Connection from 127.0.0.1 on Port 64553
+2018-11-06 11:31:56 8628: User curtis logged in
+2018-11-06 11:32:25 14100: Server terminated by keyboard interrupt
+2018-11-06 11:32:27 1924: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 11:32:34 9756: Connection from 127.0.0.1 on Port 64555
+2018-11-06 11:32:38 9756: User curtis logged in
+2018-11-06 11:32:44 9756: User curtis logged out
+2018-11-06 11:32:44 9756: BBS Exited
+2018-11-06 11:32:47 8956: Connection from 127.0.0.1 on Port 64557
+2018-11-06 11:32:52 8956: User curtis logged in
+2018-11-06 11:33:00 8956: User curtis logged out
+2018-11-06 11:33:00 8956: BBS Exited
+2018-11-06 11:34:15 1924: Server terminated by keyboard interrupt
+2018-11-06 11:34:21 1216: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 11:34:25 9564: Connection from 127.0.0.1 on Port 64563
+2018-11-06 11:34:29 9564: User curtis logged in
+2018-11-06 11:34:34 9564: User curtis logged out
+2018-11-06 11:34:34 9564: BBS Exited
+2018-11-06 11:34:40 1700: Connection from 127.0.0.1 on Port 64565
+2018-11-06 11:34:43 1700: User curtis logged in
+2018-11-06 11:34:48 1700: User curtis logged out
+2018-11-06 11:34:48 1700: BBS Exited
+2018-11-06 11:34:53 1216: Server terminated by keyboard interrupt
+2018-11-06 11:35:11 9664: Server Opened on 127.0.0.1 Port 2323
+2018-11-06 11:35:37 6344: Connection from 127.0.0.1 on Port 64568
+2018-11-06 11:35:41 6344: User curtis logged in
+2018-11-06 11:36:07 6344: User curtis logged out
+2018-11-06 11:36:07 6344: BBS Exited
+2018-11-06 11:36:12 7188: Connection from 127.0.0.1 on Port 64570
+2018-11-06 11:36:16 7188: User curtis logged in
+2018-11-06 11:36:39 7188: User curtis logged out
+2018-11-06 11:36:39 7188: BBS Exited
+2018-11-06 11:36:44 3104: Connection from 127.0.0.1 on Port 64573
+2018-11-06 11:36:49 3104: User curtis logged in
+2018-11-06 11:37:08 3104: User curtis logged out
+2018-11-06 11:37:08 3104: BBS Exited
+2018-11-06 11:37:17 9664: Server terminated by keyboard interrupt
