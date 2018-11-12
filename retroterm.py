@@ -4,6 +4,7 @@
 import sys
 python3 = sys.version_info.major == 3
 
+import argparse
 if python3: import queue
 else: import Queue as queue
 import socket
@@ -15,6 +16,7 @@ else: from tkinter import *
 DEBUG = 0
 
 BBSLIST = [
+["default", "", "23"],
 ["retrobbs", "ohiodivide.com", "2323"],
 ["local", "localhost", "2323"],
 ["RetroBBS", "66.172.27.229", "2323"],
@@ -506,8 +508,16 @@ class Term(Tk):
   def __vdtFocused(self, event=None):
     if not self.modem.connected:
       self.ui.focus()
+  def __parseArgs(self):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("host", nargs="?", default=HOSTNAME, help="Host Name or IP Address")
+    parser.add_argument("port", nargs="?", default=HOSTPORT, help="TCP Port (Default=%s)" % HOSTPORT)
+    args = parser.parse_args()
+    return args
+  
   def __init__(self):
     Tk.__init__(self)
+    self.args = self.__parseArgs()
     self.echo = IntVar()
     #self.iconbitmap('retroterm.ico')
     self.title("RetroTerm")
@@ -519,8 +529,8 @@ class Term(Tk):
     self.vdt.pack()
     self.vdt.bind('<Key>', self.__keypress)
     self.vdt.bind('<FocusIn>', self.__vdtFocused)
-    self.ui.setHostName(HOSTNAME)
-    self.ui.setPortNo(HOSTPORT)
+    self.ui.setHostName(self.args.host)
+    self.ui.setPortNo(self.args.port)
     self.ui.focus()
 term = Term()
 term.mainloop()
