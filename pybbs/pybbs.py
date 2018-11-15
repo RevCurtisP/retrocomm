@@ -56,7 +56,11 @@ ECHO = '\x01' #      Echo Option
 DONT = '\xFE' #      Don't Command
 IAC  = '\xFF' #      Interpret as Command
 
+#ANSI Escape Sequences
+DELETE = ESC + '[3~'
+
 #Character Sequence Constants
+BACKSPC = BS + SPC + BS
 CLRSCRN = SPC + FF + BS
 NEWLINE = CR + LF
 ECHOOFF = IAC + DONT + ECHO
@@ -104,7 +108,6 @@ class Debug(object):
       if encoding:
         message = message.encode(encoding, 'ignore')
       sys.stdout.write(str(self.threadid) + ' ' + timestamp + ' ' + message + '\n')
-
 
 class Database(object):
   def __debug(self, message, level=1):
@@ -236,6 +239,7 @@ class BBS(object):
       raise EOFError()
     return data
   def send(self, data):
+    if data == BS: data = BACKSPC
     self.socket.send(data)
     self.__debug("send>"+data, 5)
   def write(self, data=None):
@@ -258,6 +262,7 @@ class BBS(object):
       self.socket.settimeout(timeout)
     data = self.recv(timeout)
     if data:
+      if data in [DEL, DELETE]: data = BS
       self.inbuffer += data
       if self.echo: self.send(data)
     if timeout: 
@@ -341,7 +346,6 @@ class BBS(object):
       self.password = ''
       columns = (self.username, self.password, 'USER', now, self.msgno)
       self.db.write_row('USERS', columns)
-
   def info(self):
     self.writeLine("Enter ? for Help")
   def chatroom(self):
@@ -365,17 +369,20 @@ class BBS(object):
           else: 
             if newline == None: newline = True
         line = skt.recv(1024)
+        self.__debug("SKT.RECV>" + line, 4)
         if line:
-          if str(line).find(self.username+":"):
+          if str(line).find("[%s] " % self.username):
             if newline:
               self.writeLine('')
               newline = False
             self.writeLine(line)
-        else: break
+        else:
+          self.__debug("Exiting chatroom", 3)        
+          break
       except socket.timeout as x:
         continue
       except Exception as x:
-        self.__debug("Error " + str(x) + " communicating with chat server", 2)
+        self.__debug("Error %s communicating with chat server" % s, 2)
     skt.close()
   def main(self):
     self.menu = self.main_menu
@@ -604,6 +611,7 @@ class BBS_Server(SocketServer.ThreadingTCPServer):
 class ChatServer(object):
   clients = {}
   addresses = {}
+  names = {}
   HOST = 'localhost'
   PORT = 9999
   BUFSIZ = 1024
@@ -631,38 +639,54 @@ class ChatServer(object):
     self.__debug('Exiting Chat Server', 1)
   def handle_client(self, client): 
     """Handles a single client connection."""
+    client.settimeout(None)
     try:
       name = str(client.recv(self.BUFSIZ))
+      self.__debug("Received name %s from client" % name, 3)
+      self.names[client] = name
     except Exception as x:
-      self.__debug("Error " + str(x) + " communicating with client", 2)
+      self.__debug("Error %s communicating with client" % x, 2)
       del self.clients[client]
       del self.addresses[client]
       return
-    client.send(bytes("Type .quit to exit chat."))
-    self.broadcast(bytes("%s has joined the chat!" % name))
+    client.send(bytes("[Type .quit to exit chat]"))
+    self.broadcast(bytes("[%s has joined the chat]" % name))
     self.clients[client] = name
     while True:
       try:
         msg = client.recv(self.BUFSIZ)
+        self.__debug("CLIENT.RECV> %s" %msg, 4)
       except Exception as x:
+        self.__debug("CLIENT.RECV> %s" % type(x), 3)
+        self.__debug("CLIENT.RECV> %s" % x, 3)
         msg = None
-      if msg and msg != bytes(".quit"):
-        self.broadcast(msg, name + ": ")
+      if msg:
+        if msg[0] == bytes("."):
+          cmd = str(msg[1:])
+          self.__debug("Processing command %s" % cmd, 2)
+          if cmd == "quit" or cmd == "q": break
+          elif cmd == "who" or cmd == "w": 
+            client.sendall("[%s]" % ", ".join(dict.values(self.names)))
+          else: client.sendall("[Invalid command]")
+        else:
+          self.broadcast(msg, "[%s] " % name)
       else:
-        client.close()
-        del self.clients[client]
-        self.broadcast(bytes("%s has left the chat." % name))
-        host, port = self.addresses[client]
-        del self.addresses[client]
-        self.__debug("Client disconnected from " + host + " on Port " + str(port), 2)
         break
+    client.close()
+    del self.clients[client]
+    self.broadcast(bytes("[%s has left the chat]" % name))
+    host, port = self.addresses[client]
+    del self.addresses[client]
+    self.__debug("Client disconnected from " + host + " on Port " + str(port), 2)
+        
   def broadcast(self, msg, prefix=""):
     """Broadcasts a message to all the clients."""
     for sock in self.clients:
       sock.send(bytes(prefix) + msg)
+    self.__debug("Broadcast: %s" % msg, 3)
   def start(self):
     self.threadid = threading.current_thread().ident
-    self.debuglevel = 2
+    self.debuglevel = 4
     self.debug = Debug(self.debuglevel, self.threadid)
     self.stopped = threading.Event()
     self.__debug("Starting Chat Server", 1)
