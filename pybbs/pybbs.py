@@ -264,7 +264,9 @@ class BBS(object):
     if data:
       if data in [DEL, DELETE]: data = BS
       self.inbuffer += data
-      if self.echo: self.send(data)
+      if self.echo: 
+        if len(data)>1 or data>=' ' or data in [BS, CR, LF]: 
+          self.send(data)
     if timeout: 
       self.socket.settimeout(oldTimeout)
   def telnetCommands(self):
@@ -280,7 +282,9 @@ class BBS(object):
       bufferlen = len(self.inbuffer)
       self.fillbuffer(timeout)
       if timeout and len(self.inbuffer) == bufferlen: return None
-    if cr < 0:   #only an LF was received
+    if brk > -1: #Ctrl-C was received
+      i = brk;  j = brk + 1; nl = BRK
+    elif cr < 0:   #only an LF was received
       i = lf; j = lf + 1; nl = LF
     elif lf < 0: #only a CR was recieved
       i = cr; j = cr + 1; nl = CR
@@ -300,7 +304,8 @@ class BBS(object):
       else: line = line[1:]
     self.__debug("read>"+line+nl, 4)
     if nl == CR: self.write(LF) #Write LF if only CR received
-    return line
+    if nl == BRK: return BRK
+    else: return line
   def readCommand(self, prompt='Command>'):
     command = self.readLine(prompt).strip().upper()
     self.__debug("Received command "+command, 3)
@@ -311,6 +316,7 @@ class BBS(object):
     self.writeLine('Single . on a line to exit')
     while True:
       line = self.readLine()
+      if line == BRK: return BRK
       if line.strip() == '.': return block
       block.append(line)
   def elapsed(self, format=None):
@@ -388,6 +394,7 @@ class BBS(object):
     self.menu = self.main_menu
     while True:
       command = self.readCommand()
+      if command == BRK: continue
       if command == 'QUIT' or command == 'Q':
         self.writeLine(QUITMSG)
         self.writeLine(LOGOUT)
@@ -494,6 +501,7 @@ class BBS(object):
         self.writeLine('No Files in Library')
     elif command == 'READ' or command == 'R':
       name = self.readCommand("File Name?")
+      if name == BRK: return
       spec = os.path.join(self.filedir, name)
       try:
         with open(spec) as file:
@@ -542,17 +550,19 @@ class BBS(object):
           self.writeLine('Date: ' + date)
           self.writeLine('Subject: ' + subject)
           self.writeBlock(block)
-          self.readLine('...Enter to Continue...')
+          line = self.readLine('...Enter to Continue...')
+          if line == BRK: break
           self.db.update_row('EMAIL', {'ROWID': rowid}, {'READ': 1})
       else:
         self.writeLine('No mail found')
     elif command == 'SEND' or command == 'S':
       sender = self.username
       recipient = self.readLine('To User:')
-      if not recipient: return
+      if not recipient or recipient == BRK: return
       subject = self.readLine('Subject:')
-      if not subject: return
+      if not subject or subject == BRK: return
       block = self.readBlock('Message')
+      if block == BRK: return 
       message = '\n'.join(block)
       timestamp = time.mktime(time.localtime())
       read = 0
