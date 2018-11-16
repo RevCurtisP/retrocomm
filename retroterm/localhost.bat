@@ -1,1 +1,1 @@
-start pythonw retroterm.py localhost 2323
+start pythonw retroterm.py localhost 2323 -f ":curtis\n"
