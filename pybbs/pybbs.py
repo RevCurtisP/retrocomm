@@ -125,6 +125,23 @@ class Database(object):
     self.__debug('Creating Database Table ' + table, 3)
     query = 'CREATE TABLE IF NOT EXISTS ' + table + ' ( ' + columns +' )'
     self.execute(query)
+  def count_rows(self, table, criteria):
+    cols = []
+    what = []
+    for column, value in criteria.items():
+      cols.append(column + '=?')
+      what.append(value)
+    where = ' AND '.join(cols)
+    query = 'SELECT COUNT(*) FROM ' + table + ' WHERE ' + where
+    col = tuple(what)
+    self.crsr.execute(query, col)
+    rows = self.crsr.fetchall()
+    return rows[0][0]
+  def last_row(self, table):
+    query = 'SELECT MAX(ROWID) FROM ' + table 
+    self.crsr.execute(query)
+    rows = self.crsr.fetchall()
+    return rows[0][0]
   def read_row(self, table, criteria):
     rows = self.read_rows(table, criteria, 1)
     return rows[0] if len(rows) else None
@@ -173,7 +190,7 @@ class Database(object):
     self.__debug('Query: ' + query, 3)
     self.__debug('Columns: ' + str(columns), 3)
     self.crsr.execute(query, columns)
-    self.conn.commit()    
+    self.conn.commit()
 
 class Log(object):
   def __getthreadid(self):
@@ -262,7 +279,8 @@ class BBS(object):
       self.socket.settimeout(timeout)
     data = self.recv(timeout)
     if data:
-      if data in [DEL, DELETE]: data = BS
+      if data == ESC: data = BRK
+      elif data in [DEL, DELETE]: data = BS
       self.inbuffer += data
       if self.echo: 
         if len(data)>1 or data>=' ' or data in [BS, CR, LF]: 
@@ -352,8 +370,21 @@ class BBS(object):
       self.password = ''
       columns = (self.username, self.password, 'USER', now, self.msgno)
       self.db.write_row('USERS', columns)
+    msgCount = max(self.lastMsgNo() + 1 - self.msgno, 0)
+    if msgCount:
+      self.writeLine('There are %i unread post(s).' % msgCount)
+    mailCount = self.db.count_rows('EMAIL', {'RECIPIENT': self.username, 'READ': 0})
+    if mailCount:
+      self.writeLine('You have %i new email(s).' % mailCount)
   def info(self):
     self.writeLine("Enter ? for Help")
+  def lastMsgNo(self):
+    rowid = self.db.last_row('FORUM')
+    try:
+      msgno = int(rowid)
+    except ValueError as x:
+      msgno = 0
+    return msgno
   def chatroom(self):
     address = ('localhost', 9999)
     skt = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -456,11 +487,16 @@ class BBS(object):
       if command == 'READ' or command == 'R':
         while True:
           try:
-            self.msgno = int(self.readLine('Message#:'))
+            line = self.readLine('Message#:')
+            if line == BRK: return
+            self.msgno = int(line)
             break
           except ValueError as x:
             self.writeLine('Invalid entry')
       else:
+        if self.msgno > self.lastMsgNo():
+          self.writeLine('There are no new posts.')
+          return          
         self.writeLine('Message#: ' + str(self.msgno))
       criteria = {'SUBFORUM': self.subforum, 'ROWID': self.msgno}
       row = self.db.read_row('FORUM', criteria)
@@ -516,7 +552,7 @@ class BBS(object):
       self.writeLine('Invalid command.')
   def mail_menu(self, command):
     if command == '?':
-      self.writeLine('[H]ELP, [L]IST, [N]EXT, [R]EAD, [S]END, E[X]IT')
+      self.writeLine('[H]ELP, [L]IST, [R]EAD, [S]END, E[X]IT')
     elif command == 'HELP' or command == 'H':
       self.writeLine('HELP Display this text')
       self.writeLine('LIST Display Message List')
