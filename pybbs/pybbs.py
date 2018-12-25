@@ -16,6 +16,13 @@ import time
 
 CONFIG_FILE = "pybbs.cfg"
 
+'''Debug Levels
+   1 - Default level
+   2 - Show connects, logins, and disconnects
+   3 - Show user actions and database queries
+   4 - Show lines sent and received
+   5 - Show all data sent and received'''
+
 DEFAULT_CONFIG = {
 'IPADDR': "127.0.0.1",
 'PORT': "2323", 
@@ -51,10 +58,16 @@ ESC  = '\x1B' # ^[ - Escape
 SPC  = ' '    #    - Space
 DEL  = '\x7F' #      Delete
 
+#Telnet Command Code Options
+ECHO = '\x01' #Echo
 #Telnet Command Code Sequences
-ECHO = '\x01' #      Echo Option
-DONT = '\xFE' #      Don't Command
-IAC  = '\xFF' #      Interpret as Command
+AYT  = '\xF6' #Are You There?
+WILL = '\xFB' #Don't Command
+WONT = '\xFC' #Won't Command
+DO   = '\xFD' #Do Command
+DONT = '\xFE' #Don't Command
+
+IAC  = '\xFF' #Interpret as Command
 
 #ANSI Escape Sequences
 DELETE = ESC + '[3~'
@@ -287,12 +300,37 @@ class BBS(object):
           self.send(data)
     if timeout: 
       self.socket.settimeout(oldTimeout)
-  def telnetCommands(self):
-    return
+  def sendTelnetCommand(self, command):
+    self.send(IAC + command)
+  def processTelnetCommand(self, command, option):
+    txt = "Processing Command &i" & command
+    if option != None: txt += "with Option %i" % option
+    self.debug(txt, 4)
+    
+  def checkTelnetCommands(self, timeout=None, fillbuffer=True):
+    commandCount = 0
+    while True:
+      if fillbuffer: self.fillbuffer(timeout)
+      i = self.inbuffer.find(IAC)
+      if i > -1:
+        commandCount = commandCount + 1
+        j = i + 1
+        command = self.inbuffer(j)
+        if command in {DO, DONT, WILL, WONT}: 
+          j = j + 1
+          option = self.inbuffer(j)
+        else: 
+          option = None
+        self.inbuffer = self.inbuffer[:i] + self.inbuffer[j+1:]
+        self.__debug("TELNET.CMD.RECV> %i %i" % (command, option), 4)
+        processTelnerCommand(command, option)
+      else:
+        break  
+    return commandCount
   def readLine(self, prompt=None, timeout=None):
     if prompt: self.writePrompt(prompt)
     while True:
-      self.telnetCommands()
+      if self.telnetClient: self.checkTelnetCommands(timeout, False)
       brk = self.inbuffer.find(BRK)
       cr = self.inbuffer.find(CR)
       lf = self.inbuffer.find(LF)
@@ -619,12 +657,14 @@ class BBS(object):
     self.log.open(self.config.getstr('BBS', 'LOGFILE'))
     self.log.write('Connection from ' + self.user_ip + ' on Port ' + str(self.user_port))
     self.__debug("BBS Started", 1)
-    self.time_login = time.time()
-    self.subforum = 0
+    self.telnetClient = False
     self.msgno = 1
+    self.subforum = 0
+    self.time_login = time.time()
     self.enabletimeout()
     self.open_db()
     try:
+      #self.checkClient()
       self.welcome()
       self.login()
       self.info()
@@ -703,13 +743,13 @@ class ChatServer(object):
         msg = client.recv(self.BUFSIZ)
         self.__debug("CLIENT.RECV> %s" %msg, 4)
       except Exception as x:
-        self.__debug("CLIENT.RECV> %s" % type(x), 3)
-        self.__debug("CLIENT.RECV> %s" % x, 3)
+        self.__debug("CLIENT.RECV> %s" % type(x), 4)
+        self.__debug("CLIENT.RECV> %s" % x, 4)
         msg = None
       if msg:
         if msg[0] == bytes("."):
           cmd = str(msg[1:])
-          self.__debug("Processing command %s" % cmd, 2)
+          self.__debug("Processing command %s" % cmd, 3)
           if cmd == "quit" or cmd == "q": break
           elif cmd == "who" or cmd == "w": 
             client.sendall("[%s]" % ", ".join(dict.values(self.names)))
