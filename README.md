@@ -1,4 +1,5 @@
-python
+RetroComm
 ======
 
-Standalone Python Scripts
+Desktop and Server Applications Simulating 1980's Telecommunication
+
