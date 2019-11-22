@@ -14,6 +14,15 @@ import sys
 import threading
 import time
 
+libdir = "lib"
+phoon = "odphoon.py"
+if os.path.exists(libdir):
+  sys.path.append(libdir)
+  if os.path.exists(os.path.join(libdir,phoon)):
+    from odphoon import Odphoon
+  else:
+    phoon = None
+
 CONFIG_FILE = "pybbs.cfg"
 
 '''Debug Levels
@@ -60,6 +69,18 @@ DEL  = '\x7F' #      Delete
 
 #Telnet Command Code Options
 ECHO = '\x01' #Echo
+SGO =  '\x03' #Suppress Go Ahead
+STS =  '\x05' #Status
+TTYP = '\x18' #Terminal Type
+WSIZ = '\x1F' #Window Size
+TSPD = '\x20' #Terminal Speed
+RFC  = '\x21' #Remote Flow Control
+LMOD = '\x22' #Line Mode
+ENV  = '\x24' #Environment Variables
+OPTS = {ECHO:"ECHO",SGO:"SUPPRESS_GO_AHEAD",STS:"STATUS",TTYP:"TERMINAL_TYPE",
+        WSIZ:"WINDOW_SIZE",TSPD:"TERMINAL_SPEED",RFC:"REMOTE_FLOW_CONTROL",
+        LMOD:"LINE_MODE",ENV:"ENVIRONMENT_VARIABLES"}
+
 #Telnet Command Code Sequences
 AYT  = '\xF6' #Are You There?
 WILL = '\xFB' #Don't Command
@@ -68,6 +89,7 @@ DO   = '\xFD' #Do Command
 DONT = '\xFE' #Don't Command
 
 IAC  = '\xFF' #Interpret as Command
+CMDS = {AYT:"AYT",WILL:"WILL",WONT:"WONT",DO:"DO",DONT:"DONT"}
 
 #ANSI Escape Sequences
 DELETE = ESC + '[3~'
@@ -81,7 +103,7 @@ ECHOOFF = IAC + DONT + ECHO
 class Config(object):
   def __debug(self, message):
     if self.verbose:
-      print message
+      print(message)
   def __init__(self, verbose=False):
     self.verbose = verbose
     self.config = ConfigParser.ConfigParser(DEFAULT_CONFIG)
@@ -102,7 +124,7 @@ class Config(object):
     try: 
       return int(self.getstr(section, option))
     except ValueError as err:
-      self.__debug(str(ValueError) + " in section " + section + " option ", option)
+      self.__debug(str(ValueError) + " in section " + section + " option " + option)
       quit()
 
 class Debug(object):
@@ -205,6 +227,22 @@ class Database(object):
     self.crsr.execute(query, columns)
     self.conn.commit()
 
+class FileList:
+  def __init__(self, filedir):
+    self.filedir = filedir
+    self.files = os.listdir(filedir)
+  def __iter__(self):
+    return self
+  def __len__(self):
+    return len(self.files)
+  def next(self):
+    file = next(self.files)
+    spec = os.path.join(filedir, file)
+    stat = os.stat(spec)
+    date = datetime.fromtimestamp(stat.st_ctime).strftime(' %m/%d/%y ')
+    size = str(stat.st_size)
+    return file.ljust(12) + date + size
+
 class Log(object):
   def __getthreadid(self):
     thread = threading.current_thread()
@@ -243,6 +281,13 @@ class BBS(object):
     self.filedir = config.getstr('BBS', 'FILEDIR')
     self.dbname = config.getstr('BBS', 'DBNAME')
     self.chat = config.getint('BBS', 'CHAT')
+  def __addapps(self):
+    self.apps = False
+    if phoon:
+      self.odphoon = Odphoon()
+      self.apps = True
+    else:
+      self.odphoon = None
   def __getthreadid(self):
     thread = threading.current_thread()
     threadid = thread.ident
@@ -255,6 +300,7 @@ class BBS(object):
     self.threadid = self.__getthreadid()
     self.__config()
     self.debug = Debug(self.debuglevel, self.threadid)
+    self.__addapps() 
     self.__debug("BBS Initialized", 1)
     self.__clearInBuffer()
   def recv(self, timeout=False):
@@ -294,6 +340,8 @@ class BBS(object):
     if data:
       if data == ESC: data = BRK
       elif data in [DEL, DELETE]: data = BS
+      if self.telnetClient: 
+        data = self.checkTelnetCommands(data)
       self.inbuffer += data
       if self.echo: 
         if len(data)>1 or data>=' ' or data in [BS, CR, LF]: 
@@ -303,34 +351,34 @@ class BBS(object):
   def sendTelnetCommand(self, command):
     self.send(IAC + command)
   def processTelnetCommand(self, command, option):
-    txt = "Processing Command &i" & command
-    if option != None: txt += "with Option %i" % option
-    self.debug(txt, 4)
-    
-  def checkTelnetCommands(self, timeout=None, fillbuffer=True):
-    commandCount = 0
+    if command in CMDS: cmd = CMDS[command]
+    else: cmd = str(ord(command))
+    txt = "Processing Telnet Command " + cmd
+    if option != None: 
+      if option in OPTS: opt = OPTS[option]
+      else: opt = "with Option " + str(ord(option))
+      txt += " " + opt
+    self.__debug(txt, 4)
+  def checkTelnetCommands(self, data):
     while True:
-      if fillbuffer: self.fillbuffer(timeout)
-      i = self.inbuffer.find(IAC)
+      i = data.find(IAC)
       if i > -1:
-        commandCount = commandCount + 1
         j = i + 1
-        command = self.inbuffer(j)
+        command = data[j]
         if command in {DO, DONT, WILL, WONT}: 
           j = j + 1
-          option = self.inbuffer(j)
+          option = data[j]
         else: 
           option = None
-        self.inbuffer = self.inbuffer[:i] + self.inbuffer[j+1:]
-        self.__debug("TELNET.CMD.RECV> %i %i" % (command, option), 4)
-        processTelnerCommand(command, option)
+        data = data[:i] + data[j+1:]
+        self.__debug("data=" + data, 5)
+        self.processTelnetCommand(command, option)
       else:
         break  
-    return commandCount
+    return data
   def readLine(self, prompt=None, timeout=None):
     if prompt: self.writePrompt(prompt)
     while True:
-      if self.telnetClient: self.checkTelnetCommands(timeout, False)
       brk = self.inbuffer.find(BRK)
       cr = self.inbuffer.find(CR)
       lf = self.inbuffer.find(LF)
@@ -420,7 +468,7 @@ class BBS(object):
     rowid = self.db.last_row('FORUM')
     try:
       msgno = int(rowid)
-    except ValueError as x:
+    except (TypeError, ValueError) as x:
       msgno = 0
     return msgno
   def chatroom(self):
@@ -474,6 +522,7 @@ class BBS(object):
   def main_menu(self, command):
     if command == '?':
       line = '[H]ELP, [L]IST, [R]EAD, [N]EXT, [P]OST, '
+      if self.apps: line += '[A]PPS, '
       if self.chat: line += '[C]HAT, '
       if self.filedir: line += '[F]ILE, '
       line += '[M]AIL, [U]SER, [Q]UIT'
@@ -484,6 +533,7 @@ class BBS(object):
       self.writeLine('READ Read Forum Message')
       self.writeLine('NEXT Read Next Message')
       self.writeLine('POST Post Forum Message')
+      if self.apps: self.writeLine('APPS Applications Menu')
       if self.chat: self.writeLine('CHAT Enter Chat Room')
       if self.filedir: self.writeLine('FILE File Library Menu')
       self.writeLine('MAIL Electronic Mail Menu')
@@ -493,6 +543,11 @@ class BBS(object):
       self.writeLine('User Name: '+self.username)
       self.writeLine('IP Address: '+self.user_ip)
       self.writeLine('Online for '+str(self.elapsed())+' seconds')
+    elif command == 'APPS' or command == 'A':
+      if self.apps:
+        self.writeLine('Entering Applications Menu')        
+        self.menu = self.apps_menu
+      else: self.writeLine('Applications Not Available')        
     elif command == 'CHAT' or command == 'C':
       self.chatroom()
     elif command == 'FILE' or command == 'F':
@@ -552,6 +607,24 @@ class BBS(object):
         self.writeLine('Message Not Found')
     else:
       self.writeLine('Invalid command.')
+  def apps_menu(self, command):
+    if command == '?':
+      line = '[H]ELP, '
+      if self.odphoon: line += '[M]OON, '
+      line += 'E[X]IT'
+      self.writeLine(line)
+    elif command == 'HELP' or command == 'H':
+      self.writeLine('HELP Display this text')
+      if self.odphoon: self.writeLine('MOON Current Moon Phase')
+      self.writeLine('EXIT Return to Main Menu')
+    elif command == 'MOON' or command == 'M':
+      for line in self.odphoon.putmoon(numlines=6):
+        self.writeLine(line)
+    elif command == 'EXIT' or command == 'X':
+      self.writeLine('Exiting File Library')        
+      self.menu = self.main_menu
+    else:
+      self.writeLine('Invalid command.')
   def file_menu(self, command):
     if command == '?':
       self.writeLine('[H]ELP, [L]IST, [R]EAD, E[X]IT')
@@ -561,15 +634,10 @@ class BBS(object):
       self.writeLine('READ Read File Contents')
       self.writeLine('EXIT Return to Main Menu')
     elif command == 'LIST' or command == 'L':
-      files = os.listdir(self.filedir)
-      if len(files):
+      list = FileList(self.filedir)
+      if len(list):
         self.writeLine('File           Date   Size')
-        for file in files:
-          spec = os.path.join(self.filedir, file)
-          stat = os.stat(spec)
-          date = datetime.fromtimestamp(stat.st_ctime).strftime(' %m/%d/%y ')
-          size = str(stat.st_size)
-          line = file.ljust(12) + date + size
+        for line in list:
           self.writeLine(line)
       else:
         self.writeLine('No Files in Library')
@@ -657,7 +725,7 @@ class BBS(object):
     self.log.open(self.config.getstr('BBS', 'LOGFILE'))
     self.log.write('Connection from ' + self.user_ip + ' on Port ' + str(self.user_port))
     self.__debug("BBS Started", 1)
-    self.telnetClient = False
+    self.telnetClient = True
     self.msgno = 1
     self.subforum = 0
     self.time_login = time.time()
