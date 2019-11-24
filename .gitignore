@@ -1,0 +1,12 @@
+#Database files (created automatically)
+*.db
+
+#Compiled Python scripts
+*.pyc
+
+#Log and Debug files
+*.dbg
+*.log
+
+#Private directories
+work/
