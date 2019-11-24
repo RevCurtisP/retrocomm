@@ -13,8 +13,6 @@ import telnetlib as tl
 if python3: from tkinter import *
 else: from tkinter import *
 
-DEBUG = 0
-
 BBSLIST = [
 ["default", "", "23"],
 ["retrobbs", "ohiodivide.com", "2323"],
@@ -477,9 +475,9 @@ class Modem(object):
       #if Ctrl-C, abort display of incoming data
       if char == '\x03': self.__clear_inbuffer()
       self.outbuffer.put(char)
-  def set_debuglevel(self, debuglevel):
-    self.__debuglevel = debuglevel
-    self.__telnet.set_debuglevel(debuglevel)
+  def set_debug(self, debug):
+    self.debug = debug
+    self.__telnet.set_debuglevel(debug)
 
 class UI(Frame):
   def __init__(self, master, enterFn, connectFn, helpFn):
@@ -591,6 +589,7 @@ class Term(Tk):
     #connect to host
     host = self.ui.getHostName()
     portno = self.ui.getPortNo()
+    self.__debug("Connecting to %s:%s" % (host,portno))
     self.modem.connect(host, portno)
     if self.modem.connected:
       self.__setUIConnected()
@@ -620,7 +619,7 @@ class Term(Tk):
     parser.add_argument("host", nargs="?", default=HOSTNAME, help="Host Name or IP Address")
     parser.add_argument("port", nargs="?", default=HOSTPORT, help="TCP Port (Default=%s)" % HOSTPORT)
     parser.add_argument("-c", "--connect", action='store_true', help="Connect Immediately")
-    parser.add_argument("-d", "--debug", type=int, default=DEBUG, help="Debug Level (0-?)")
+    parser.add_argument("-d", "--debug", action='store_true', help="Debug Level (0-?)")
     parser.add_argument("-f", "--fkeys", type=str, default=None, help="Function Key Assignments")
     parser.add_argument("-m", "--msg", type=str, default=None, help="Message to display on terminal")
     args = parser.parse_args()
@@ -658,11 +657,12 @@ class Term(Tk):
     self.ui.setHostName(self.args.host)
     self.ui.setPortNo(self.args.port)
     self.debug=self.args.debug
-    self.modem.set_debuglevel(self.debug)
+    self.modem.set_debug(self.debug)
     self.fkeys = self.__parseFKeys(self.args.fkeys)
     if self.args.msg: self.__input(self.args.msg)
-    self.ui.focus()
     if self.args.connect: self.__connect()
+    else: self.ui.focus()
+
 
 if __name__ == "__main__":
   term = Term()
