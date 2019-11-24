@@ -236,6 +236,8 @@ class VDT(Frame):
         column += 1
       row += 1
     return display
+  def __buildTextbuffer(self, size):
+    return bytearray(size)
   def homeCursor(self):
     '''Move cursor to home position: row 0, column 0'''
     self.__row = 0
@@ -247,24 +249,52 @@ class VDT(Frame):
     self.__charset = self.__buildcharset()
     self.__maxchar = len(self.__charset) - 1
     self.__display = self.__builddisplay()
+    self.__textbuffer = self.__buildTextbuffer(len(self.__display))
     self.__lastChar = None
     self.homeCursor()
+  def __fillDisplay(self, bitmap=None):
+    #fillse all display cells with specified bitmap
+    for i in self.__display:
+      self.__display[i].drawBitmap(bitmap)
+  def __fillTextBuffer(self, char=0):
+    #fills the text buffer with specified character
+    for i in range(0,len(self.__textbuffer)-1):
+      self.__textbuffer[i] = char
   def clearScreen(self):
     '''Clear screen and move cursor to home position'''
-    for i in self.__display:
-      self.__display[i].drawBitmap(None)
+    self.__fillDisplay()
+    self.__fillTextBuffer()
     self.homeCursor()
   def __getCanvas(self):
     #returns canvas at current row and column
-    i = self.__row * VDT_COLUMNS + self.__column
-    return self.__display[i]
+    return self.__display[self.__getCurrentIndex()]
+  def __getIndex(self, row, column):
+    #returns index for current row and column
+    return row * VDT_COLUMNS + column
+  def __getCurrentIndex(self):
+    #returns index for current row and column
+    return self.__getIndex(self.__row, self.__column)
   def drawChar(self, char):
     '''Draw ASCII character char at current row and column'''
-    c = 0 if char==None else ord(char)
+    c = 0 if char==None else ord(char)    
     canvas = self.__getCanvas()
     if c <= self.__maxchar:
       bitmap = self.__charset[c]
       canvas.drawBitmap(bitmap)
+      self.__textbuffer[self.__getCurrentIndex()] = c
+  def getText(self, trim=True):
+    lines = []
+    last = 0
+    for row in range(0, VDT_ROWS):
+      i = row * VDT_COLUMNS
+      bytes = self.__textbuffer[i:i+VDT_COLUMNS]
+      if trim: 
+        while len(bytes) and bytes[-1] == 0: bytes.pop()
+      if len(bytes): last = row+1
+      line = bytes.decode('ASCII')
+      lines.append(line.replace('\x00',' '))
+    print(last)
+    return lines[0:last]
   def setCursor(self, state):
     '''Set cursor state.
        If state = True, turn cursor on
@@ -382,11 +412,11 @@ class Modem(object):
   def __clear_inbuffer(self):
     while not self.inbuffer.empty():
       self.inbuffer.get()
-  def __echo(self, data):
-    self.inbuffer.put('\n')
+  def __echo(self, data, newline=True):
+    if newline: self.inbuffer.put('\n')
     for char in data:
       self.inbuffer.put(char)
-    self.inbuffer.put('\r')
+    if newline: self.inbuffer.put('\r')
   def __read(self):
     try:
       data = self.__telnet.read_very_eager()
@@ -452,7 +482,7 @@ class Modem(object):
     self.__telnet.set_debuglevel(debuglevel)
 
 class UI(Frame):
-  def __init__(self, master, enterFn, buttonFn):
+  def __init__(self, master, enterFn, connectFn, helpFn):
     Frame.__init__(self, master)
     self.hostlabel = Label(self, text=" Host ")
     self.hostlabel.grid(row=0, column=0, sticky=E)
@@ -464,9 +494,13 @@ class UI(Frame):
     self.portno = Entry(self, width=5)
     self.portno.grid(row=0, column=3)
     self.portno.bind('<Key-Return>', enterFn)
-    self.button = Button(self, width=8)
-    self.button.grid(row=0, column=6, sticky=E+W)
-    self.button.config(command=buttonFn) 
+    self.connect = Button(self, width=8)
+    self.connect.grid(row=0, column=6, sticky=E+W)
+    self.connect.config(command=connectFn) 
+    if helpFn:
+      self.help = Button(self, width=4, text="Help")
+      self.help.grid(row=0, column=7, sticky=W)
+      self.help.config(command=helpFn) 
   def focus(self):
     Frame.focus(self)
     self.hostname.focus()
@@ -474,9 +508,9 @@ class UI(Frame):
     return self.hostname.get()
   def getPortNo(self):
     return self.portno.get()
-  def setButtonText(self, connected):
+  def setConnectText(self, connected):
     text = "Disconnect" if connected else "Connect"
-    self.button.config(text=text)
+    self.connect.config(text=text)
   def setHostName(self, host):
     self.hostname.delete(0,END)
     self.hostname.insert(0,host)
@@ -496,12 +530,39 @@ class Term(Tk):
     #write string to modem
     for char in s:
       self.modem.outchar(char)
+  def __cmdkeys(self):
+    #Builds Command Key Dictionary
+    cmdkeys = {}
+    cmdkeys[(0x40001,45)] = self.__paste    #Shift-Insert
+    cmdkeys[(0x40004,45)] = self.__copy     #Ctrl-Insert
+    cmdkeys[(0x40005,45)] = self.__copyAll  #Ctrl-Shift-Insert
+    return cmdkeys
+  def __copy(self, trim=True):
+    self.__debug("Copying Text from Terminal")
+    lines = self.vdt.getText(trim)
+    text = '\n'.join(lines) + '\n'
+    self.clipboard_clear()
+    self.clipboard_append(text)
+    self.__debug("Term: Wrote to clipboard: %s" % text)
+  def __copyAll(self):
+    return(self.__copy(False))
+  def __paste(self):
+    text = self.clipboard_get()
+    self.__debug("Term: Read from clipboard: %s" % text)
+    if python3: data = bytes(text, 'ASCII')
+    else: data = text
+    self.__debug("Term: Pasting Text: %s" % text)
+    self.__output(text)
   def __keypress(self, event):
     #handle keypress from terminal
     self.__debug("Term: keypress %s" % str(event))
+    extkey = (event.state,event.keycode)
+    self.__debug("Term: extkey=(%x,%d)" % extkey)
     if event.keycode in self.fkeys:
       line = self.fkeys[event.keycode]
       self.__output(line)
+    elif extkey in self.cmdkeys:
+      self.cmdkeys[extkey]()
     else:
       if event.keycode in self.keymap:
         char = self.keymap[event.keycode]
@@ -511,7 +572,7 @@ class Term(Tk):
     return('break')
   def __setUIConnected(self):
     #Set UI conection state to Modem connection state
-    self.ui.setButtonText(self.modem.connected)
+    self.ui.setConnectText(self.modem.connected)
   def __disconnected(self):
     #handle disconnection
     self.__setUIConnected()
@@ -539,12 +600,14 @@ class Term(Tk):
     #disconnect from host
     self.modem.disconnect() 
     self.__disconnected()
-  def __uiButton(self):
+  def __uiConnect(self):
     #handle Connect/Disconnect Button Click
     if self.modem.connected:
       self.__disconnect()
     else:
       self.__connect()
+  def __uiHelp(self):
+    return
   def __uiDefault(self, event=None):
     #handle Enter Key from Host and Port Entries
     if not self.modem.connected:
@@ -556,6 +619,7 @@ class Term(Tk):
     parser = argparse.ArgumentParser()
     parser.add_argument("host", nargs="?", default=HOSTNAME, help="Host Name or IP Address")
     parser.add_argument("port", nargs="?", default=HOSTPORT, help="TCP Port (Default=%s)" % HOSTPORT)
+    parser.add_argument("-c", "--connect", action='store_true', help="Connect Immediately")
     parser.add_argument("-d", "--debug", type=int, default=DEBUG, help="Debug Level (0-?)")
     parser.add_argument("-f", "--fkeys", type=str, default=None, help="Function Key Assignments")
     parser.add_argument("-m", "--msg", type=str, default=None, help="Message to display on terminal")
@@ -580,10 +644,11 @@ class Term(Tk):
     self.args = self.__parseArgs()
     self.echo = IntVar()
     #self.iconbitmap('retroterm.ico')
+    self.cmdkeys = self.__cmdkeys()
     self.keymap = KEYMAP
     self.title("RetroTerm")
     self.modem = Modem(self.__inChar, self.after, self.__disconnected)
-    self.ui = UI(self, self.__uiDefault, self.__uiButton)
+    self.ui = UI(self, self.__uiDefault, self.__uiConnect, False)
     self.ui.pack()
     self.__setUIConnected()
     self.vdt = VDT(self)
@@ -597,8 +662,8 @@ class Term(Tk):
     self.fkeys = self.__parseFKeys(self.args.fkeys)
     if self.args.msg: self.__input(self.args.msg)
     self.ui.focus()
+    if self.args.connect: self.__connect()
 
 if __name__ == "__main__":
   term = Term()
   term.mainloop()
-
