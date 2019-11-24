@@ -23,6 +23,10 @@ if os.path.exists(libdir):
   else:
     phoon = None
 
+weather = 'weather.py'
+if os.path.exists(weather): from weather import Weather
+else: weather = None
+
 CONFIG_FILE = "pybbs.cfg"
 
 '''Debug Levels
@@ -37,6 +41,7 @@ DEFAULT_CONFIG = {
 'PORT': "2323", 
 'TIMEOUT': "0",
 'DEBUG': "4",
+'DEBUGFILE': "pybbs.dbg",
 'LOGFILE': None,
 'FILEDIR': None,
 'DBNAME': "pybbs.db",
@@ -103,7 +108,7 @@ ECHOOFF = IAC + DONT + ECHO
 class Config(object):
   def __debug(self, message):
     if self.verbose:
-      print(message)
+      sys.stdout.write(message + '\n')
   def __init__(self, verbose=False):
     self.verbose = verbose
     self.config = ConfigParser.ConfigParser(DEFAULT_CONFIG)
@@ -128,8 +133,10 @@ class Config(object):
       quit()
 
 class Debug(object):
-  def __init__(self, level=0, threadid=None):
+  def __init__(self, level=0, debugfile=None, threadid=None):
     self.level = level
+    if debugfile: self.file = open(debugfile, 'w')
+    else: self.file = sys.stdout
     if not threadid:
       thread = threading.current_thread()
       threadid = thread.ident
@@ -140,9 +147,8 @@ class Debug(object):
       if type(message) == unicode: encoding = 'unicode_escape'
       elif type(message) == str: encoding = 'string_escape'
       else: encoding = None
-      if encoding:
-        message = message.encode(encoding, 'ignore')
-      sys.stdout.write(str(self.threadid) + ' ' + timestamp + ' ' + message + '\n')
+      if encoding: message = message.encode(encoding, 'ignore')
+      self.file.write(str(self.threadid) + ' ' + timestamp + ' ' + message + '\n')
 
 class Database(object):
   def __debug(self, message, level=1):
@@ -228,20 +234,28 @@ class Database(object):
     self.conn.commit()
 
 class FileList:
-  def __init__(self, filedir):
+  def __init__(self, filedir, debug=None):
+    self.debug = debug
+    if self.debug: debug.write("Reading directory %s" % filedir, 3)
     self.filedir = filedir
-    self.files = os.listdir(filedir)
+    self.fileindex = 0
+    self.files = os.listdir(self.filedir)
+    if self.debug: debug.write("Found %d files" % len(self.files), 3)
   def __iter__(self):
     return self
   def __len__(self):
     return len(self.files)
   def next(self):
-    file = next(self.files)
-    spec = os.path.join(filedir, file)
-    stat = os.stat(spec)
-    date = datetime.fromtimestamp(stat.st_ctime).strftime(' %m/%d/%y ')
-    size = str(stat.st_size)
-    return file.ljust(12) + date + size
+    if self.fileindex < len(self.files):
+      file = self.files[self.fileindex]
+      self.fileindex += 1
+      spec = os.path.join(self.filedir, file)
+      stat = os.stat(spec)
+      date = datetime.fromtimestamp(stat.st_ctime).strftime(' %m/%d/%y ')
+      size = str(stat.st_size)
+      return file.ljust(12) + date + size
+    else: 
+      raise StopIteration
 
 class Log(object):
   def __getthreadid(self):
@@ -277,6 +291,7 @@ class BBS(object):
     config = Config()
     self.config = config
     self.debuglevel = config.getint('BBS', 'DEBUG')
+    self.debugfile = config.getstr('BBS', 'DEBUGFILE')
     self.timeout = config.getint('BBS', 'TIMEOUT')
     self.filedir = config.getstr('BBS', 'FILEDIR')
     self.dbname = config.getstr('BBS', 'DBNAME')
@@ -288,6 +303,11 @@ class BBS(object):
       self.apps = True
     else:
       self.odphoon = None
+    if weather:
+      self.weather = Weather()
+      self.apps = True
+    else:
+      self.weather = None
   def __getthreadid(self):
     thread = threading.current_thread()
     threadid = thread.ident
@@ -299,7 +319,7 @@ class BBS(object):
     self.echo = True
     self.threadid = self.__getthreadid()
     self.__config()
-    self.debug = Debug(self.debuglevel, self.threadid)
+    self.debug = Debug(self.debuglevel, self.debugfile, self.threadid)
     self.__addapps() 
     self.__debug("BBS Initialized", 1)
     self.__clearInBuffer()
@@ -611,17 +631,23 @@ class BBS(object):
     if command == '?':
       line = '[H]ELP, '
       if self.odphoon: line += '[M]OON, '
+      if self.weather: line += '[W]THR, '
       line += 'E[X]IT'
       self.writeLine(line)
     elif command == 'HELP' or command == 'H':
       self.writeLine('HELP Display this text')
       if self.odphoon: self.writeLine('MOON Current Moon Phase')
+      if self.weather: self.writeLine('WTHR Weather Report')
       self.writeLine('EXIT Return to Main Menu')
     elif command == 'MOON' or command == 'M':
-      for line in self.odphoon.putmoon(numlines=6):
-        self.writeLine(line)
+      self.writeBlock(self.odphoon.putmoon(numlines=6))
+    elif command == 'WTHR' or command == 'W':
+      location = self.readLine('Location:')
+      if location:
+        self.writeLine('Getting weather for ' + location)
+        self.writeBlock(self.weather.current(location))
     elif command == 'EXIT' or command == 'X':
-      self.writeLine('Exiting File Library')        
+      self.writeLine('Exiting Applications Menu')        
       self.menu = self.main_menu
     else:
       self.writeLine('Invalid command.')
@@ -634,7 +660,8 @@ class BBS(object):
       self.writeLine('READ Read File Contents')
       self.writeLine('EXIT Return to Main Menu')
     elif command == 'LIST' or command == 'L':
-      list = FileList(self.filedir)
+      list = FileList(self.filedir, self.debug)
+      if self.debug: self.debug.write("Listing %d files" % len(list), 3)
       if len(list):
         self.writeLine('File           Date   Size')
         for line in list:
@@ -773,6 +800,11 @@ class ChatServer(object):
   def __debug(self, message, level=1):
     if self.debug:
       self.debug.write(message, level)
+  def __config(self):
+    config = Config()
+    self.config = config
+    self.debuglevel = config.getint('CHAT', 'DEBUG')
+    self.debugfile = config.getstr('CHAT', 'DEBUGFILE')
   def __init__(self):
     self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     self.server.settimeout(1)
@@ -840,14 +872,15 @@ class ChatServer(object):
     self.__debug("Broadcast: %s" % msg, 3)
   def start(self):
     self.threadid = threading.current_thread().ident
-    self.debuglevel = 4
-    self.debug = Debug(self.debuglevel, self.threadid)
+    self.__config()
+    self.debug = Debug(self.debuglevel, self.debugfile, self.threadid)
     self.stopped = threading.Event()
     self.__debug("Starting Chat Server", 1)
     self.server.bind((self.HOST, self.PORT))
     self.__debug("Chat Server bound to " + self.HOST + " on Port " + str(self.PORT), 1)
     self.server.listen(self.MAX_CLIENTS)
     self.__debug("Waiting for connection...", 1)
+    sys.stdout.write("Chat Server running on %s:%s\n" % (self.HOST, self.PORT))
     accept_thread = threading.Thread(target=self.accept_incoming_connections)
     accept_thread.start()  # Starts the infinite loop.
     accept_thread.join()
@@ -862,21 +895,25 @@ if __name__ == "__main__":
   ipaddr = config.getstr('SERVER', 'IPADDR')
   port = config.getint('SERVER', 'PORT')
   debuglevel = config.getint('SERVER', 'DEBUG')
-  debug = Debug(debuglevel)
+  debugfile = config.getstr('SERVER', 'DEBUGFILE')
+  debug = Debug(debuglevel, debugfile)
   log = Log()
   log.open(config.getstr('SERVER', 'LOGFILE'))
   if config.getint('CHAT', 'CHAT'):
     chatServer = ChatServer()
     threading.Thread(target=chatServer.start).start()
+  else:
+    chatServer = None
   server = BBS_Server((ipaddr, port), BBS_Handler)
   ipaddr, port = server.server_address
   log.write('Server Opened on ' + ipaddr + ' Port ' + str(port))
   debug.write("Listening on {0:} port {1:}".format(ipaddr, port), 1)
+  sys.stdout.write("BBS Server running on %s:%s\n" % (ipaddr, port))
   try:
     server.serve_forever()
   except KeyboardInterrupt:
     debug.write("Caught Keyboard Interrupt", 1)
     log.write('Server terminated by keyboard interrupt')
-  chatServer.stop()
+  if chatServer: chatServer.stop()
   debug.write('Exiting Server',1)
   sys.exit()
