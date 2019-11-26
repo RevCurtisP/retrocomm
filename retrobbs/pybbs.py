@@ -97,11 +97,13 @@ IAC  = '\xFF' #Interpret as Command
 CMDS = {AYT:"AYT",WILL:"WILL",WONT:"WONT",DO:"DO",DONT:"DONT"}
 
 #ANSI Escape Sequences
-DELETE = ESC + '[3~'
+ANSIDEL = ESC + '[3~'       #Delete Key
+ANSICLR = ESC + '[37;40m'   #Set Colors: White on Black
+ANSICLS = ESC + '[2J'       #Clear Screen
 
 #Character Sequence Constants
 BACKSPC = BS + SPC + BS
-CLRSCRN = SPC + FF + BS
+CLRSCRN = ANSICLR + ANSICLR + CR + FF + BS
 NEWLINE = CR + LF
 ECHOOFF = IAC + DONT + ECHO
 
@@ -149,7 +151,7 @@ class Debug(object):
       else: encoding = None
       if encoding: message = message.encode(encoding, 'ignore')
       self.file.write(str(self.threadid) + ' ' + timestamp + ' ' + message + '\n')
-
+      self.file.flush() #Force writing to debug file
 class Database(object):
   def __debug(self, message, level=1):
     if self.debug: self.debug.write(message, level)
@@ -359,7 +361,7 @@ class BBS(object):
     data = self.recv(timeout)
     if data:
       if data == ESC: data = BRK
-      elif data in [DEL, DELETE]: data = BS
+      elif data in [DEL, ANSIDEL]: data = BS
       if self.telnetClient: 
         data = self.checkTelnetCommands(data)
       self.inbuffer += data
