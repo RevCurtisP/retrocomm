@@ -531,6 +531,9 @@ class Term(Tk):
   def __cmdkeys(self):
     #Builds Command Key Dictionary
     cmdkeys = {}
+    cmdkeys[(0x20000,67)] = self.__copy     #Alt-C
+    cmdkeys[(0x20000,86)] = self.__paste    #Alt-V
+    cmdkeys[(0x20000,88)] = self.__copyAll  #Alt-X
     cmdkeys[(0x40001,45)] = self.__paste    #Shift-Insert
     cmdkeys[(0x40004,45)] = self.__copy     #Ctrl-Insert
     cmdkeys[(0x40005,45)] = self.__copyAll  #Ctrl-Shift-Insert
