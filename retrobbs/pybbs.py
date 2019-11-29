@@ -99,13 +99,28 @@ CMDS = {AYT:"AYT",WILL:"WILL",WONT:"WONT",DO:"DO",DONT:"DONT"}
 #ANSI Escape Sequences
 ANSIDEL = ESC + '[3~'       #Delete Key
 ANSICLR = ESC + '[37;40m'   #Set Colors: White on Black
-ANSICLS = ESC + '[2J'       #Clear Screen
+ANSICLS = ESC + '[2J'       #Clear Screen and Home Cursor
 
 #Character Sequence Constants
 BACKSPC = BS + SPC + BS
-CLRSCRN = ANSICLR + ANSICLR + CR + FF + BS
 NEWLINE = CR + LF
 ECHOOFF = IAC + DONT + ECHO
+
+#Some Terminal programs (like Procomm) clear the screen to black instead of
+#the background color, which isn't defaulted to black. Setting the terminal
+#to white on black fixes this and looks better anyway
+ANSCLS = ANSICLR + ANSICLS  
+
+#Generic Clear Screen sequence. Most simple terminals recognize form feed 
+#as a clear screen. The CR will move the cursor to the beginning of the line
+#which shoyuld cause all the ignored escape codes that were written to the
+#screen to be overwritten. If the Form Feed was written to the screen, the
+#Backspace will erase it, except in Windows Telnet, which treats a Form Feed
+#as a New Line, but that's a minor inconveniance
+TTYCLS = CR + FF + BS
+
+#Now combine all the Clear Screen codes into a single sequence
+CLRSCRN = ANSCLS + TTYCLS
 
 class Config(object):
   def __debug(self, message):
@@ -300,16 +315,15 @@ class BBS(object):
     self.chat = config.getint('BBS', 'CHAT')
   def __addapps(self):
     self.apps = False
-    if phoon:
+    if phoon: 
       self.odphoon = Odphoon()
       self.apps = True
-    else:
+    else: 
       self.odphoon = None
-    if weather:
-      self.weather = Weather()
-      self.apps = True
-    else:
+    if weather: self.weather = Weather(self.debug)
+    else: 
       self.weather = None
+      self.apps = True
   def __getthreadid(self):
     thread = threading.current_thread()
     threadid = thread.ident
@@ -370,11 +384,18 @@ class BBS(object):
           self.send(data)
     if timeout: 
       self.socket.settimeout(oldTimeout)
+  def strTelnetCommand(self, command):
+    if len(command) == 1:
+      if command in CMDS: cmd = CMDS[command]
+      else: cmd = str(ord(command))
+    else: cmd = command
+    return cmd
   def sendTelnetCommand(self, command):
+    cmd = self.strTelnetCommand(command)
+    self.__debug("Sending Telnet command " + cmd, 4)
     self.send(IAC + command)
   def processTelnetCommand(self, command, option):
-    if command in CMDS: cmd = CMDS[command]
-    else: cmd = str(ord(command))
+    cmd = self.strTelnetCommand(command)
     txt = "Processing Telnet Command " + cmd
     if option != None: 
       if option in OPTS: opt = OPTS[option]
@@ -382,6 +403,7 @@ class BBS(object):
       txt += " " + opt
     self.__debug(txt, 4)
   def checkTelnetCommands(self, data):
+    self.__debug("Checking for incoming Telnet commands", 4)
     while True:
       i = data.find(IAC)
       if i > -1:
@@ -451,7 +473,21 @@ class BBS(object):
     return _elapsed
   def enabletimeout(self):
     if self.timeout: self.socket.settimeout(self.timeout)
+  def checkClient(self):
+    #This code may not be needed - more testing is required
+
+    #The Windows Telnet client defaults to local echo, but does not send 
+    #any Telnet commands after connecting, so we need to send at least
+    #one command for the client detection logic to work
+    if False:
+      self.sendTelnetCommand(DONT + ECHO) #Force Echo Off in Telnet Clients
+      self.sendTelnetCommand(DONT + LMOD) #Turn off Line Mode in Telnet Clients
+    #ToDo: Add telnet client detection. Currently, the code naively assumes
+    #that all connections are from a Telnet client
   def welcome(self):
+    #Send Clear Screen sequences and Welcome Message in a single line so that
+    #no CR/LF is inserted between them, which should cause the welcome message
+    #to overwrite the clesr screen sequences if the client ignores them
     self.writeLine(CLRSCRN + WELCOME)
   def login(self):
     self.__debug("Authenticating", 3)
@@ -529,6 +565,23 @@ class BBS(object):
       except Exception as x:
         self.__debug("Error %s communicating with chat server" % s, 2)
     skt.close()
+  def echoApp(self, timeout=None):
+    self.writeLine('Press keys to echo')
+    self.writeLine('Esc twice to exit')
+    self.__debug('Echoing recieved characters', 4)
+    lastChar = None
+    while True:
+      data = self.recv(timeout)
+      if len(data):
+        for char in data:
+          if char == ESC and lastChar == ESC: break
+          self.__debug('Echoing %s' % char, 4)
+          self.send(char)
+          lastChar = char
+      else:
+        if timeout: break
+    self.__debug('Exiting Echo App', 4)
+    return
   def main(self):
     self.menu = self.main_menu
     while True:
@@ -632,6 +685,7 @@ class BBS(object):
   def apps_menu(self, command):
     if command == '?':
       line = '[H]ELP, '
+      if False: line += '[ECHO], '
       if self.odphoon: line += '[M]OON, '
       if self.weather: line += '[W]THR, '
       line += 'E[X]IT'
@@ -641,6 +695,8 @@ class BBS(object):
       if self.odphoon: self.writeLine('MOON Current Moon Phase')
       if self.weather: self.writeLine('WTHR Weather Report')
       self.writeLine('EXIT Return to Main Menu')
+    elif False and (command == 'ECHO' or command == 'E'):
+      self.echoApp()
     elif command == 'MOON' or command == 'M':
       self.writeBlock(self.odphoon.putmoon(numlines=6))
     elif command == 'WTHR' or command == 'W':
@@ -761,7 +817,7 @@ class BBS(object):
     self.enabletimeout()
     self.open_db()
     try:
-      #self.checkClient()
+      self.checkClient()
       self.welcome()
       self.login()
       self.info()
