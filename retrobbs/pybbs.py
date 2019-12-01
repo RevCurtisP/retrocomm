@@ -13,6 +13,7 @@ import string
 import sys
 import threading
 import time
+import traceback
 
 libdir = "lib"
 phoon = "odphoon.py"
@@ -74,17 +75,23 @@ DEL  = '\x7F' #      Delete
 
 #Telnet Command Code Options
 ECHO = '\x01' #Echo
-SGO =  '\x03' #Suppress Go Ahead
+SGA =  '\x03' #Suppress Go Ahead
 STS =  '\x05' #Status
 TTYP = '\x18' #Terminal Type
-WSIZ = '\x1F' #Window Size
+OMRK = '\x1B' #Output Marking
+NAWS = '\x1F' #Window Size
 TSPD = '\x20' #Terminal Speed
 RFC  = '\x21' #Remote Flow Control
 LMOD = '\x22' #Line Mode
+XDL  = '\x23' #X Display Location
 ENV  = '\x24' #Environment Variables
-OPTS = {ECHO:"ECHO",SGO:"SUPPRESS_GO_AHEAD",STS:"STATUS",TTYP:"TERMINAL_TYPE",
-        WSIZ:"WINDOW_SIZE",TSPD:"TERMINAL_SPEED",RFC:"REMOTE_FLOW_CONTROL",
-        LMOD:"LINE_MODE",ENV:"ENVIRONMENT_VARIABLES"}
+NENV = '\x27' #New Environment
+
+#Option Descriptions - based on those used in PuTTY log files
+OPTS = {ECHO:"ECHO",SGA:"SGA",STS:"STATUS",TTYP:"TTYPE", 
+        OMRK:"OUTMRK", NAWS:"NAWS",TSPD:"TSPEED",RFC:"REMOTE_FLOW_CONTROL",
+        XDL:"XDISPLOC",LMOD:"LINEMODE",ENV:"OLD_ENVIRON",
+        NENV:"NEW_ENVIRON"}
 
 #Telnet Command Code Sequences
 AYT  = '\xF6' #Are You There?
@@ -97,19 +104,22 @@ IAC  = '\xFF' #Interpret as Command
 CMDS = {AYT:"AYT",WILL:"WILL",WONT:"WONT",DO:"DO",DONT:"DONT"}
 
 #ANSI Escape Sequences
+ANSICSI = ESC + '['         #Control Sequence Introducer
+ANSIQDC = ESC + '[c'        #Query Device Code
+ANSIHOM = ESC + '[H'        #Cursor Home
 ANSIDEL = ESC + '[3~'       #Delete Key
-ANSICLR = ESC + '[37;40m'   #Set Colors: White on Black
+ANSIATR = ESC + '[0;37;40m' #Reset Display Attributes, Set to White on Black
 ANSICLS = ESC + '[2J'       #Clear Screen and Home Cursor
 
 #Character Sequence Constants
 BACKSPC = BS + SPC + BS
 NEWLINE = CR + LF
-ECHOOFF = IAC + DONT + ECHO
 
 #Some Terminal programs (like Procomm) clear the screen to black instead of
 #the background color, which isn't defaulted to black. Setting the terminal
-#to white on black fixes this and looks better anyway
-ANSCLS = ANSICLR + ANSICLS  
+#to white on black fixes this and looks better anyway.
+#Some clienys (like PuTTY) don't Home the cursor on Clear Screem
+ANSCLS = ANSIATR + ANSICLS + ANSIHOM
 
 #Generic Clear Screen sequence. Most simple terminals recognize form feed 
 #as a clear screen. The CR will move the cursor to the beginning of the line
@@ -117,7 +127,7 @@ ANSCLS = ANSICLR + ANSICLS
 #screen to be overwritten. If the Form Feed was written to the screen, the
 #Backspace will erase it, except in Windows Telnet, which treats a Form Feed
 #as a New Line, but that's a minor inconveniance
-TTYCLS = CR + FF + BS
+TTYCLS = FF + BS
 
 #Now combine all the Clear Screen codes into a single sequence
 CLRSCRN = ANSCLS + TTYCLS
@@ -150,9 +160,11 @@ class Config(object):
       quit()
 
 class Debug(object):
-  def __init__(self, level=0, debugfile=None, threadid=None):
+  def __init__(self, level=0, debugfile=None, threadid=None, append=True):
     self.level = level
-    if debugfile: self.file = open(debugfile, 'w')
+    if debugfile: 
+      mode = 'a' if append else 'w'
+      self.file = open(debugfile, 'a')
     else: self.file = sys.stdout
     if not threadid:
       thread = threading.current_thread()
@@ -332,13 +344,16 @@ class BBS(object):
   def __init__(self, socket):
     self.socket = socket
     self.user_ip, self.user_port = self.socket.getpeername()
-    self.echo = True
     self.threadid = self.__getthreadid()
     self.__config()
     self.debug = Debug(self.debuglevel, self.debugfile, self.threadid)
+    self.__debug("Starting BBS on %s port %s" % (self.user_ip, self.user_port))
     self.__addapps() 
     self.__debug("BBS Initialized", 1)
     self.__clearInBuffer()
+  def setAttribute(self, name, value):
+    setattr(self, name, value)
+    self.__debug("Set self.%s to %s" % (name, value))
   def recv(self, timeout=False):
     try: 
       data = self.socket.recv(32)
@@ -357,9 +372,13 @@ class BBS(object):
   def write(self, data=None):
     if data:
        self.__debug("write>"+data, 4)
+       if self.telnetClient:
+         data = data.replace('\xff', '\xff\xff')
        self.send(data)
-  def writeClearScreen():
-    self.write(FF+BS)
+  def writeClearScreen(self):
+    self.__debug("Writing Clear Screen", 4)
+    cls = ANSCLS if self.ansiClient else TTYCLS
+    self.write(cls)
   def writeLine(self, data=""):
     self.write(data + NEWLINE)
   def writePrompt(self, data):
@@ -378,47 +397,95 @@ class BBS(object):
       elif data in [DEL, ANSIDEL]: data = BS
       if self.telnetClient: 
         data = self.checkTelnetCommands(data)
+      if self.ansiClient:
+        data = self.checkAnsiEscapes(data)
       self.inbuffer += data
       if self.echo: 
         if len(data)>1 or data>=' ' or data in [BS, CR, LF]: 
           self.send(data)
     if timeout: 
       self.socket.settimeout(oldTimeout)
-  def strTelnetCommand(self, command):
+  def checkAnsiEscapes(self, data):
+    self.__debug("Checking for ANSI Escape Sequences", 4)
+    ofs = 0; #Initialize find() offset
+    while True:
+      self.__debug("ofs=%d, data=%s" % (ofs,data), 5)
+      i = data.find(ANSICSI, ofs)
+      if i > -1:
+        sequence = ''
+        for j in range(i+2, len(data)):
+          char = data[j]
+          if char < ' ': break
+          sequence += char
+          if '@' <= char < DEL: break
+        data = data[:i] + data[j+1:]
+        self.__debug("Found sequence %s" % sequence, 4)
+        if self.ansiClient == -1: self.setAttribute('ansiClient', True)
+      else:
+        if self.ansiClient == -1: self.setAttribute('ansiClient', False)
+        break
+    return data
+  def strTelnetCommand(self, command, option):
     if len(command) == 1:
       if command in CMDS: cmd = CMDS[command]
       else: cmd = str(ord(command))
     else: cmd = command
-    return cmd
-  def sendTelnetCommand(self, command):
-    cmd = self.strTelnetCommand(command)
-    self.__debug("Sending Telnet command " + cmd, 4)
-    self.send(IAC + command)
-  def processTelnetCommand(self, command, option):
-    cmd = self.strTelnetCommand(command)
-    txt = "Processing Telnet Command " + cmd
     if option != None: 
       if option in OPTS: opt = OPTS[option]
       else: opt = "with Option " + str(ord(option))
-      txt += " " + opt
-    self.__debug(txt, 4)
+    else: opt = ""
+    return cmd + " "+ opt
+  def sendTelnetCommand(self, command, option):
+    cmd = self.strTelnetCommand(command, option)
+    self.__debug("Sending Telnet command " + cmd, 4)
+    self.send(IAC + command + option)
+  def processTelnetCommand(self, command, option):
+    #PuTTY WONT LINEMODE only if the server replies
+    #to DO ECHO with WILL ECHO and DO SGA with WILL SGA
+    cmd = self.strTelnetCommand(command, option)
+    self.__debug("Processing Telnet Command " + cmd, 4)
+    if command == DO:
+      if option == ECHO: 
+        self.setAttribute('echo', True)
+        self.sendTelnetCommand(WILL, ECHO)
+      elif option == SGA:
+        self.sendTelnetCommand(WILL, SGA)
+    elif command == DONT:
+      if option == ECHO: 
+        self.setAttribute('echo', False)
+        self.sendTelnetCommand(WONT, ECHO)
+    elif command == WILL:
+      if option == SGA:
+        self.sendTelnetCommand(DO, SGA)
+      elif option == TTYP:
+        self.sendTelnetCommand(DO, TTYP)
   def checkTelnetCommands(self, data):
     self.__debug("Checking for incoming Telnet commands", 4)
+    ofs = 0; #Initialize find() offset
     while True:
-      i = data.find(IAC)
+      self.__debug('ofs=%d' % ofs, 5)
+      i = data.find(IAC, ofs)
       if i > -1:
         j = i + 1
         command = data[j]
-        if command in {DO, DONT, WILL, WONT}: 
-          j = j + 1
-          option = data[j]
-        else: 
-          option = None
-        data = data[:i] + data[j+1:]
-        self.__debug("data=" + data, 5)
-        self.processTelnetCommand(command, option)
+        if command == IAC:
+          self.__debug('Processed Telnet IAC Escape', 4)
+          data = data[:i] + data[j:]
+          self.__debug("data=" + data, 5)
+          ofs = i + 1 #Skip /xFF on next pass
+        else:
+          if command in {DO, DONT, WILL, WONT}: 
+            j = j + 1
+            option = data[j]
+          else: 
+            option = None
+          data = data[:i] + data[j+1:]
+          self.__debug("data=" + data, 5)
+          self.processTelnetCommand(command, option)
+          if self.telnetClient < 0: self.setAttribute('telnetClient', True)
       else:
-        break  
+        if self.telnetClient < 0: self.setAttribute('telnetClient', False)
+        break
     return data
   def readLine(self, prompt=None, timeout=None):
     if prompt: self.writePrompt(prompt)
@@ -473,22 +540,28 @@ class BBS(object):
     return _elapsed
   def enabletimeout(self):
     if self.timeout: self.socket.settimeout(self.timeout)
-  def checkClient(self):
-    #This code may not be needed - more testing is required
-
-    #The Windows Telnet client defaults to local echo, but does not send 
-    #any Telnet commands after connecting, so we need to send at least
-    #one command for the client detection logic to work
-    if False:
-      self.sendTelnetCommand(DONT + ECHO) #Force Echo Off in Telnet Clients
-      self.sendTelnetCommand(DONT + LMOD) #Turn off Line Mode in Telnet Clients
-    #ToDo: Add telnet client detection. Currently, the code naively assumes
-    #that all connections are from a Telnet client
+  def detectClient(self):
+    #Some clients only send telnet commands in response to 
+    #the server, so we need to send at least one command
+    #for the detection logic in self.fillbuffer() to work
+    self.setAttribute('telnetClient', -1) #Detect Telnet Client
+    self.fillbuffer(.1) #Check for any commands sent by client
+    self.sendTelnetCommand(DONT, LMOD) #Turn off Line Mode in client
+    self.fillbuffer(.1) #Check for response
+    if self.telnetClient == -1: self.setAttribute('telnetClient', False)
+    #If the client sends a response to the Query Device Code sequence,
+    #it will be detected in self.fillbuffer(), which will set
+    #self.telnetClient accordingly
+    self.setAttribute('ansiClient', -1) #Detect ANSI Client
+    self.write(ANSIQDC)
+    self.fillbuffer(.1) #Check for response
+    if self.ansiClient == -1: self.setAttribute('ansiClient', False)
   def welcome(self):
     #Send Clear Screen sequences and Welcome Message in a single line so that
     #no CR/LF is inserted between them, which should cause the welcome message
     #to overwrite the clesr screen sequences if the client ignores them
-    self.writeLine(CLRSCRN + WELCOME)
+    self.writeClearScreen()
+    self.writeLine(WELCOME)
   def login(self):
     self.__debug("Authenticating", 3)
     self.username = None
@@ -565,23 +638,6 @@ class BBS(object):
       except Exception as x:
         self.__debug("Error %s communicating with chat server" % s, 2)
     skt.close()
-  def echoApp(self, timeout=None):
-    self.writeLine('Press keys to echo')
-    self.writeLine('Esc twice to exit')
-    self.__debug('Echoing recieved characters', 4)
-    lastChar = None
-    while True:
-      data = self.recv(timeout)
-      if len(data):
-        for char in data:
-          if char == ESC and lastChar == ESC: break
-          self.__debug('Echoing %s' % char, 4)
-          self.send(char)
-          lastChar = char
-      else:
-        if timeout: break
-    self.__debug('Exiting Echo App', 4)
-    return
   def main(self):
     self.menu = self.main_menu
     while True:
@@ -695,8 +751,6 @@ class BBS(object):
       if self.odphoon: self.writeLine('MOON Current Moon Phase')
       if self.weather: self.writeLine('WTHR Weather Report')
       self.writeLine('EXIT Return to Main Menu')
-    elif False and (command == 'ECHO' or command == 'E'):
-      self.echoApp()
     elif command == 'MOON' or command == 'M':
       self.writeBlock(self.odphoon.putmoon(numlines=6))
     elif command == 'WTHR' or command == 'W':
@@ -810,14 +864,16 @@ class BBS(object):
     self.log.open(self.config.getstr('BBS', 'LOGFILE'))
     self.log.write('Connection from ' + self.user_ip + ' on Port ' + str(self.user_port))
     self.__debug("BBS Started", 1)
-    self.telnetClient = True
+    self.setAttribute('echo', True)           #Default to Echo On
+    self.setAttribute('telnetClient', False)  #Default to Raw Socket
+    self.setAttribute('ansiClient', False)    #Default to Plain Terminal
     self.msgno = 1
     self.subforum = 0
     self.time_login = time.time()
     self.enabletimeout()
     self.open_db()
     try:
-      self.checkClient()
+      self.detectClient()
       self.welcome()
       self.login()
       self.info()
@@ -954,7 +1010,7 @@ if __name__ == "__main__":
   port = config.getint('SERVER', 'PORT')
   debuglevel = config.getint('SERVER', 'DEBUG')
   debugfile = config.getstr('SERVER', 'DEBUGFILE')
-  debug = Debug(debuglevel, debugfile)
+  debug = Debug(debuglevel, debugfile, append=False)
   log = Log()
   log.open(config.getstr('SERVER', 'LOGFILE'))
   if config.getint('CHAT', 'CHAT'):
