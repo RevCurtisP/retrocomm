@@ -8,5 +8,6 @@
 *.dbg
 *.log
 
-#Private directories
+#Work files and directories
+*.asc
 work/
