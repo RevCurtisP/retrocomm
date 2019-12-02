@@ -13,6 +13,10 @@ import telnetlib as tl
 if python3: from tkinter import *
 else: from tkinter import *
 
+import os
+sys.path.append('../lib')
+import telnetdefs as td
+
 BBSLIST = [
 ["default", "", "23"],
 ["retrobbs", "ohiodivide.com", "2323"],
@@ -380,22 +384,30 @@ class VDT(Frame):
     self.__lastChar = char
 
 class Modem(object):
+  def __debug(self, skt, msg):
+    if self.debug:
+      peer = skt.getpeername()
+      sys.stdout.write("Modem(%s): %s\n" % (peer, msg))
   def __sendraw(self, skt, data):
     self.__telnet.msg("send %r", data)
     skt.sendall(data)
+  def __respond(self, skt, cmd, opt):
+    desc = td.decode(cmd, opt)
+    self.__debug(skt, "Sent Telent Command %s" % desc)
+    response = tl.IAC + cmd + opt
+    self.__sendraw(skt, response)
   def __negotiate_option(self, skt, cmd, opt):
     #override default negotiations
+    desc = td.decode(cmd, opt)
+    self.__debug(skt, "Received Telent Command %s" % desc)
     if cmd == tl.DO:
-      rsp = tl.IAC + tl.WONT + opt
+      self.__respond(skt, tl.WONT, opt)
     elif cmd == tl.DONT:
-      rsp = tl.IAC + tl.WONT + opt
+      self.__respond(skt, tl.WONT, opt)
     elif cmd == tl.WILL:
-      rsp = tl.IAC + tl.DO + opt
+      self.__respond(skt, tl.DO, opt)
     elif cmd == tl.WONT:
-      rsp = tl.IAC + tl.DONT + opt
-    else:
-      rsp = None
-    if rsp: self.__sendraw(skt, rsp)
+      self.__respond(skt, tl.DONT, opt)
   def __init__(self, incharfn, afterfn, disconnectfn):
     object.__init__(self)
     self.inchar_callback = incharfn
@@ -519,7 +531,7 @@ class UI(Frame):
 class Term(Tk):
   def __debug(self, msg):
     if self.debug:
-      sys.stdout.write("%s\n" % msg)
+      sys.stdout.write("Term: %s\n" % msg)
   def __input(self, s):
     #write string to VDT
     for char in s:
@@ -544,21 +556,21 @@ class Term(Tk):
     text = '\n'.join(lines) + '\n'
     self.clipboard_clear()
     self.clipboard_append(text)
-    self.__debug("Term: Wrote to clipboard: %s" % text)
+    self.__debug("Wrote to clipboard: %s" % text)
   def __copyAll(self):
     return(self.__copy(False))
   def __paste(self):
     text = self.clipboard_get()
-    self.__debug("Term: Read from clipboard: %s" % text)
+    self.__debug("Read from clipboard: %s" % text)
     if python3: data = bytes(text, 'ASCII')
     else: data = text
-    self.__debug("Term: Pasting Text: %s" % text)
+    self.__debug("Pasting Text: %s" % text)
     self.__output(text)
   def __keypress(self, event):
     #handle keypress from terminal
-    self.__debug("Term: keypress %s" % str(event))
+    self.__debug("keypress %s" % str(event))
     extkey = (event.state,event.keycode)
-    self.__debug("Term: extkey=(%x,%d)" % extkey)
+    self.__debug("extkey=(%x,%d)" % extkey)
     if event.keycode in self.fkeys:
       line = self.fkeys[event.keycode]
       self.__output(line)
