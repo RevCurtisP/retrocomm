@@ -354,9 +354,9 @@ class BBS(object):
   def setAttribute(self, name, value):
     setattr(self, name, value)
     self.__debug("Set self.%s to %s" % (name, value))
-  def recv(self, timeout=False):
+  def recv(self, size=32, timeout=False):
     try: 
-      data = self.socket.recv(32)
+      data = self.socket.recv(size)
     except socket.timeout as x:
       if timeout: return None
       else: raise EORError()
@@ -391,7 +391,7 @@ class BBS(object):
     if timeout: 
       oldTimeout = self.socket.gettimeout()
       self.socket.settimeout(timeout)
-    data = self.recv(timeout)
+    data = self.recv(timeout=timeout)
     if data:
       if data == ESC: data = BRK
       elif data in [DEL, ANSIDEL]: data = BS
@@ -551,9 +551,10 @@ class BBS(object):
     if self.telnetClient == -1: self.setAttribute('telnetClient', False)
     #If the client sends a response to the Query Device Code sequence,
     #it will be detected in self.fillbuffer(), which will set
-    #self.telnetClient accordingly
+    #self.ansiClient accordingly
     self.setAttribute('ansiClient', -1) #Detect ANSI Client
     self.write(ANSIQDC)
+    time.sleep(.5) #Allow enough time to receive full response
     self.fillbuffer(.1) #Check for response
     if self.ansiClient == -1: self.setAttribute('ansiClient', False)
   def welcome(self):
