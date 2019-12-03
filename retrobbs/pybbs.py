@@ -164,7 +164,7 @@ class Debug(object):
     self.level = level
     if debugfile: 
       mode = 'a' if append else 'w'
-      self.file = open(debugfile, 'a')
+      self.file = open(debugfile, mode)
     else: self.file = sys.stdout
     if not threadid:
       thread = threading.current_thread()
